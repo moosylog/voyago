@@ -189,7 +189,7 @@ const Parser = {
         if (!rawToken) return { value: "&none" };
         let tok = rawToken.trim();
 
-        // Check if we extracted deeper configuration for this key in the pre-parse
+        // Capture rich context for drilldowns
         let configInfo = null;
         let cleanTok = tok.replace(/^TD\(/, '').replace(/\)$/, '').trim();
         if (state.tapDances && state.tapDances[cleanTok]) {
@@ -198,7 +198,6 @@ const Parser = {
             configInfo = `SEND_STRING(${state.macros[cleanTok]})`;
         }
         
-        // Build the rich context for logging
         const context = { layer: layerIdx, key: keyIdx, config: configInfo };
         
         if (Constants.DEALBREAKER_KEYS.some(bad => tok.includes(bad))) {
@@ -310,13 +309,12 @@ self.onmessage = function(e) {
         const macroRegex = /case\s+(ST_MACRO_\d+):[\s\S]*?SEND_STRING\((.*?)\);[\s\S]*?break;/g; let macMatch;
         while ((macMatch = macroRegex.exec(cleanText)) !== null) state.macros[macMatch[1]] = macMatch[2].trim();
 
-        // 🟢 EXTRACT TAP DANCES
-        const tdBlockMatch = cleanText.match(/qk_tap_dance_action_t\s+tap_dance_actions\[\]\s*=\s*\{([\s\S]*?)\};/);
-        if (tdBlockMatch) {
-            const tdMatches = tdBlockMatch[1].matchAll(/\[\s*([a-zA-Z0-9_]+)\s*\]\s*=\s*([\s\S]*?)(?=,\s*\[|\s*\})/g);
-            for (const match of tdMatches) {
-                state.tapDances[match[1].trim()] = match[2].trim();
-            }
+        // 🟢 EXTRACT ALL TAP DANCES GLOBALLY
+        const tdMatches = cleanText.matchAll(/\[\s*(DANCE_[a-zA-Z0-9_]+)\s*\]\s*=\s*([^\n\r;]+)/g);
+        for (const match of tdMatches) {
+            let val = match[2].trim();
+            if (val.endsWith(',')) val = val.slice(0, -1);
+            state.tapDances[match[1].trim()] = val;
         }
 
         const ledmapColors = Parser.extractLedmap(cleanText);
@@ -334,7 +332,6 @@ self.onmessage = function(e) {
         if (!rawLayers.length) throw new Error("No LAYOUT_voyager blocks found in the C code.");
 
         const astLayers = rawLayers.map((layerStr, layerIdx) => {
-            // 🟢 PASS LAYER AND KEY INDEX INTO THE PARSER
             const astKeys = Parser.splitQmkKeys(layerStr).map((tok, keyIdx) => Parser.translateAst(tok, state, layerIdx, keyIdx));
             
             if (ledmapColors[layerIdx]) {
