@@ -13,7 +13,6 @@ const Utils = {
         if (!state.log[category][original]) state.log[category][original] = { translated, count: 0, reason, contexts: [] };
         state.log[category][original].count++;
         
-        // Track deep context for action-required items
         if (context && category === 'warning') {
             state.log[category][original].contexts.push(context);
         }
@@ -102,14 +101,11 @@ const Parser = {
                 if (comboDefs[comboName]) {
                     let positions = comboDefs[comboName].map(k => {
                         let zmkTarget = Parser.translateAst(k, state, "Combo", null);
-                        
                         if (zmkTarget?.value === "&none" || zmkTarget?.value === "none") return -1;
-
                         let targetKeyVal = (zmkTarget?.params && zmkTarget.params[0]) ? zmkTarget.params[0].value : null;
                         
                         return layer0Nodes.findIndex(node => {
                             if (deepEqualAst(node, zmkTarget)) return true;
-
                             if (['&mt', '&lt', '&sk'].includes(node?.value) && node?.params) {
                                 if (node.params.length > 1 && targetKeyVal && node.params[1]?.value === targetKeyVal) return true;
                                 if (node.params.length === 1 && targetKeyVal && node.params[0]?.value === targetKeyVal) return true;
@@ -189,14 +185,11 @@ const Parser = {
         if (!rawToken) return { value: "&none" };
         let tok = rawToken.trim();
 
-        // Capture rich context for drilldowns
+        // CAPTURE RICH CONTEXT (Macros & Tap Dances)
         let configInfo = null;
         let cleanTok = tok.replace(/^TD\(/, '').replace(/\)$/, '').trim();
-        if (state.tapDances && state.tapDances[cleanTok]) {
-            configInfo = state.tapDances[cleanTok];
-        } else if (state.macros && state.macros[cleanTok]) {
-            configInfo = `SEND_STRING(${state.macros[cleanTok]})`;
-        }
+        if (state.tapDances && state.tapDances[cleanTok]) configInfo = state.tapDances[cleanTok];
+        else if (state.macros && state.macros[cleanTok]) configInfo = state.macros[cleanTok];
         
         const context = { layer: layerIdx, key: keyIdx, config: configInfo };
         
@@ -212,7 +205,6 @@ const Parser = {
         if (match) {
             let func = match[1].toUpperCase();
             let innerTokens = Parser.splitQmkKeys(match[2]);
-            
             let modMap = {"LSFT":"LS", "LCTL":"LC", "LALT":"LA", "LGUI":"LG", "LCMD":"LG", "LWIN":"LG", "LOPT":"LA", "RSFT":"RS", "RCTL":"RC", "RALT":"RA", "RGUI":"RG", "RCMD":"RG", "RWIN":"RG", "ROPT":"RA", "S":"LS", "C":"LC", "A":"LA", "G":"LG", "ALGR":"RA"}; 
             if (modMap[func]) func = modMap[func];
 
@@ -222,19 +214,13 @@ const Parser = {
                 Utils.logConversion(state, rawToken, "&sk", "hold_tap");
                 return { value: "&sk", params: [p0] };
             }
-            
             if (['MEH_T', 'HYPR_T', 'ALL_T'].includes(func)) {
-                let modAST = (func === 'MEH_T')
-                    ? { value: "LC", params: [{ value: "LS", params: [{ value: "LALT" }] }] }
-                    : { value: "LC", params: [{ value: "LS", params: [{ value: "LA", params: [{ value: "LGUI" }] }] }] };
-                
+                let modAST = (func === 'MEH_T') ? { value: "LC", params: [{ value: "LS", params: [{ value: "LALT" }] }] } : { value: "LC", params: [{ value: "LS", params: [{ value: "LA", params: [{ value: "LGUI" }] }] }] };
                 let p0 = Parser.parseMacroParam(innerTokens[0], state, context);
                 if (!p0 || p0.value === "none") return { value: "&none" };
-                
                 Utils.logConversion(state, rawToken, `&mt HYPR/MEH`, "hold_tap");
                 return { value: "&mt", params: [modAST, p0] };
             }
-
             if (['MT', 'LT', 'OSL', 'TT', 'TO', 'MO'].includes(func)) {
                 let params = [];
                 if (['LT', 'OSL', 'TT', 'TO', 'MO'].includes(func)) {
@@ -263,7 +249,6 @@ const Parser = {
                 Utils.logConversion(state, rawToken, "Nested Modifiers", "layer_binding");
                 return { value: "&kp", params: [{ value: func, params: parsedParams }] };
             }
-            
             return { value: `&${func.toLowerCase()}`, params: parsedParams };
         }
 
@@ -306,15 +291,47 @@ self.onmessage = function(e) {
         const defRegex = /#define\s+([A-Za-z0-9_]+)\s+([^\n\r]+)/g; let m;
         while ((m = defRegex.exec(cleanText)) !== null) state.defines[m[1]] = m[2].trim();
 
-        const macroRegex = /case\s+(ST_MACRO_\d+):[\s\S]*?SEND_STRING\((.*?)\);[\s\S]*?break;/g; let macMatch;
-        while ((macMatch = macroRegex.exec(cleanText)) !== null) state.macros[macMatch[1]] = macMatch[2].trim();
+        // 🟢 EXTRACT MACROS AND TAP DANCES DIRECTLY FROM RAW C CODE
+        const extractBraceBlock = (text, startIdx) => {
+            let start = text.indexOf('{', startIdx);
+            if (start === -1) return null;
+            let depth = 0, end = -1;
+            for (let i = start; i < text.length; i++) {
+                if (text[i] === '{') depth++;
+                if (text[i] === '}') depth--;
+                if (depth === 0) { end = i; break; }
+            }
+            if (end !== -1) return text.substring(start + 1, end).trim();
+            return null;
+        };
 
-        // 🟢 EXTRACT ALL TAP DANCES GLOBALLY
-        const tdMatches = cleanText.matchAll(/\[\s*(DANCE_[a-zA-Z0-9_]+)\s*\]\s*=\s*([^\n\r;]+)/g);
-        for (const match of tdMatches) {
-            let val = match[2].trim();
-            if (val.endsWith(',')) val = val.slice(0, -1);
-            state.tapDances[match[1].trim()] = val;
+        // Extract ZSA Custom Tap Dances
+        let tdRegex = /void\s+(dance_[a-zA-Z0-9_]+)_finished/gi;
+        let match;
+        while ((match = tdRegex.exec(rawText)) !== null) {
+            let block = extractBraceBlock(rawText, match.index);
+            if (block) state.tapDances[match[1].toUpperCase()] = block;
+        }
+
+        // Fallback for standard QMK tap dances array
+        const tdBlockMatch = rawText.match(/qk_tap_dance_action_t\s+tap_dance_actions\[\]\s*=\s*\{([\s\S]*?)\};/);
+        if (tdBlockMatch) {
+            const tdMatches = tdBlockMatch[1].matchAll(/\[\s*([a-zA-Z0-9_]+)\s*\]\s*=\s*([^\n\r]+)/g);
+            for (const match of tdMatches) {
+                let val = match[2].trim();
+                if (val.endsWith(',')) val = val.slice(0, -1);
+                if (!state.tapDances[match[1].trim()]) state.tapDances[match[1].trim()] = val;
+            }
+        }
+
+        // Extract Macros
+        let macroRegex = /case\s+(ST_MACRO_[a-zA-Z0-9_]+):/g;
+        while ((match = macroRegex.exec(rawText)) !== null) {
+            let start = match.index;
+            let end = rawText.indexOf('break;', start);
+            if (end !== -1) {
+                state.macros[match[1]] = rawText.substring(start, end + 6).trim();
+            }
         }
 
         const ledmapColors = Parser.extractLedmap(cleanText);
@@ -332,6 +349,7 @@ self.onmessage = function(e) {
         if (!rawLayers.length) throw new Error("No LAYOUT_voyager blocks found in the C code.");
 
         const astLayers = rawLayers.map((layerStr, layerIdx) => {
+            // PASS LAYER AND KEY ID INTO PARSER
             const astKeys = Parser.splitQmkKeys(layerStr).map((tok, keyIdx) => Parser.translateAst(tok, state, layerIdx, keyIdx));
             
             if (ledmapColors[layerIdx]) {
