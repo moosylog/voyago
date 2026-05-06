@@ -25,15 +25,16 @@ export const Constants = {
         "PGDN": "PG_DN", "PAGE_DOWN": "PG_DN",
         "HOME": "HOME", "END": "END",
         
-        // --- MODIFIERS ---
-        "LSFT": "LSHIFT", "LSHFT": "LSHIFT", "LEFT_SHIFT": "LSHIFT", 
-        "LCTL": "LCTRL", "LEFT_CTRL": "LCTRL",
-        "LALT": "LALT", "LEFT_ALT": "LALT", "LOPT": "LALT",
-        "LGUI": "LGUI", "LEFT_GUI": "LGUI", "LCMD": "LGUI", "LWIN": "LGUI",
-        "RSFT": "RSHIFT", "RSHFT": "RSHIFT", "RIGHT_SHIFT": "RSHIFT",
-        "RCTL": "RCTRL", "RIGHT_CTRL": "RCTRL",
-        "RALT": "RALT", "RIGHT_ALT": "RALT", "ROPT": "RALT", "ALGR": "RALT",
-        "RGUI": "RGUI", "RIGHT_GUI": "RGUI", "RCMD": "RGUI", "RWIN": "RGUI",
+        // --- MODIFIERS (Including ZSA MOD_ aliases) ---
+        "LSFT": "LSHIFT", "LSHFT": "LSHIFT", "LEFT_SHIFT": "LSHIFT", "MOD_LSFT": "LSHIFT",
+        "LCTL": "LCTRL", "LEFT_CTRL": "LCTRL", "MOD_LCTL": "LCTRL",
+        "LALT": "LALT", "LEFT_ALT": "LALT", "LOPT": "LALT", "MOD_LALT": "LALT",
+        "LGUI": "LGUI", "LEFT_GUI": "LGUI", "LCMD": "LGUI", "LWIN": "LGUI", "MOD_LGUI": "LGUI",
+        "RSFT": "RSHIFT", "RSHFT": "RSHIFT", "RIGHT_SHIFT": "RSHIFT", "MOD_RSFT": "RSHIFT",
+        "RCTL": "RCTRL", "RIGHT_CTRL": "RCTRL", "MOD_RCTL": "RCTRL",
+        "RALT": "RALT", "RIGHT_ALT": "RALT", "ROPT": "RALT", "ALGR": "RALT", "MOD_RALT": "RALT",
+        "RGUI": "RGUI", "RIGHT_GUI": "RGUI", "RCMD": "RGUI", "RWIN": "RGUI", "MOD_RGUI": "RGUI",
+        "MOD_HYPR": "LC(LS(LA(LGUI)))", "MOD_MEH": "LC(LS(LALT))",
         
         // --- SYMBOLS & SHIFTED CHARACTERS ---
         "AT": "AT", 
@@ -65,8 +66,6 @@ export const Constants = {
         "SCLN": "SEMI", "SEMI": "SEMI",
         
         // --- BRACKETS VS BRACES TRAP ---
-        // QMK uses LBRC for Brackets []. ZMK uses LBKT for Brackets [].
-        // QMK uses LCBR for Braces {}. ZMK uses LBRC for Braces {}.
         "LBRC": "LBKT", "RBRC": "RBKT", // Square Brackets
         "LCBR": "LBRC", "RCBR": "RBRC", // Curly Braces
         "LABK": "LT", "RABK": "GT",     // Angle Brackets (< >)
@@ -109,7 +108,7 @@ export const Constants = {
         "PC_CUT": "K_CUT", "MAC_CUT": "K_CUT",
         "PC_UNDO": "K_UNDO", "MAC_UNDO": "K_UNDO",
         
-        // --- INTERNATIONAL (From your source) ---
+        // --- INTERNATIONAL ---
         "FR_SCLN": "M", "FR_COLN": "DOT", "FR_EXLM": "FSLH", "FR_EQL": "EQUAL", 
         "FR_UGRV": "SQT", "FR_RPRN": "MINUS",
         "SE_ADIA": "SQT", "SE_MINS": "FSLH", "SE_ACUT": "EQUAL", "SE_LESS_MAC": "GRAVE",
