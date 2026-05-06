@@ -11,7 +11,7 @@ export const Constants = {
     RGB_MAP: { "RGB_VAI": "RGB_BRI", "RGB_VAD": "RGB_BRD", "RGB_MODE_FORWARD": "RGB_EFF", "RGB_MODE_REVERSE": "RGB_EFR", "RGB_MOD": "RGB_EFF", "RGB_RMOD": "RGB_EFR" },
     
     QMK_TO_ZMK_MAP: {
-        // Basic Keys
+        // --- BASIC KEYS ---
         "ENT": "ENTER", "RET": "ENTER", "ENTER": "ENTER",
         "ESC": "ESC", "ESCAPE": "ESC",
         "SPC": "SPACE", "SPACE": "SPACE",
@@ -19,23 +19,23 @@ export const Constants = {
         "DEL": "DELETE", "DELETE": "DELETE",
         "TAB": "TAB",
         
-        // Navigation
+        // --- NAVIGATION ---
         "UP": "UP", "DOWN": "DOWN", "LEFT": "LEFT", "RGHT": "RIGHT", "RIGHT": "RIGHT",
         "PGUP": "PG_UP", "PAGE_UP": "PG_UP", 
         "PGDN": "PG_DN", "PAGE_DOWN": "PG_DN",
         "HOME": "HOME", "END": "END",
         
-        // Modifiers
+        // --- MODIFIERS ---
         "LSFT": "LSHIFT", "LSHFT": "LSHIFT", "LEFT_SHIFT": "LSHIFT", 
         "LCTL": "LCTRL", "LEFT_CTRL": "LCTRL",
-        "LALT": "LALT", "LEFT_ALT": "LALT",
-        "LGUI": "LGUI", "LEFT_GUI": "LGUI",
+        "LALT": "LALT", "LEFT_ALT": "LALT", "LOPT": "LALT",
+        "LGUI": "LGUI", "LEFT_GUI": "LGUI", "LCMD": "LGUI", "LWIN": "LGUI",
         "RSFT": "RSHIFT", "RSHFT": "RSHIFT", "RIGHT_SHIFT": "RSHIFT",
         "RCTL": "RCTRL", "RIGHT_CTRL": "RCTRL",
-        "RALT": "RALT", "RIGHT_ALT": "RALT",
-        "RGUI": "RGUI", "RIGHT_GUI": "RGUI",
+        "RALT": "RALT", "RIGHT_ALT": "RALT", "ROPT": "RALT", "ALGR": "RALT",
+        "RGUI": "RGUI", "RIGHT_GUI": "RGUI", "RCMD": "RGUI", "RWIN": "RGUI",
         
-        // Symbols & Punctuation
+        // --- SYMBOLS & SHIFTED CHARACTERS ---
         "AT": "AT", 
         "HASH": "HASH", 
         "DLR": "DOLLAR", "DLLR": "DOLLAR",
@@ -44,29 +44,52 @@ export const Constants = {
         "AMPR": "AMPERSAND", "AMPS": "AMPERSAND",
         "ASTR": "ASTERISK", "STAR": "ASTERISK",
         "CIRC": "CARET",
-        "MINS": "MINUS", "PLUS": "PLUS", "EQL": "EQUAL", "UNDS": "UNDER",
-        "QUOT": "SQT", "QUOTE": "SQT", "DQUO": "DQT",
-        "COMM": "COMMA", "COMMA": "COMMA", "DOT": "DOT",
-        "SLSH": "FSLH", "SLASH": "FSLH", "BSLS": "BSLH", "PIPE": "PIPE", "QUES": "QMARK",
-        "GRV": "GRAVE", "TILD": "TILDE",
-        "LPRN": "LPAR", "RPRN": "RPAR",
-        "LCBR": "LBRC", "RCBR": "RBRC", 
-        "LBRC": "LBKT", "RBRC": "RBKT",
-        "LABK": "LT", "RABK": "GT",
-        "COLN": "COLON", "SCLN": "SEMI",
         
-        // Media
+        // --- PUNCTUATION (QMK to ZMK) ---
+        "MINS": "MINUS", "MINUS": "MINUS", 
+        "PLUS": "PLUS", 
+        "EQL": "EQUAL", "EQUAL": "EQUAL",
+        "UNDS": "UNDER", "UNDER": "UNDER",
+        "QUOT": "SQT", "QUOTE": "SQT", 
+        "DQUO": "DQT",
+        "COMM": "COMMA", "COMMA": "COMMA", 
+        "DOT": "DOT",
+        "SLSH": "FSLH", "SLASH": "FSLH", 
+        "BSLS": "BSLH", "BSLASH": "BSLH", 
+        "PIPE": "PIPE", 
+        "QUES": "QMARK",
+        "GRV": "GRAVE", "GRAVE": "GRAVE",
+        "TILD": "TILDE", "TILDE": "TILDE",
+        "LPRN": "LPAR", "RPRN": "RPAR",
+        "COLN": "COLON", "COLON": "COLON", 
+        "SCLN": "SEMI", "SEMI": "SEMI",
+        
+        // --- BRACKETS VS BRACES TRAP ---
+        // QMK uses LBRC for Brackets []. ZMK uses LBKT for Brackets [].
+        // QMK uses LCBR for Braces {}. ZMK uses LBRC for Braces {}.
+        "LBRC": "LBKT", "RBRC": "RBKT", // Square Brackets
+        "LCBR": "LBRC", "RCBR": "RBRC", // Curly Braces
+        "LABK": "LT", "RABK": "GT",     // Angle Brackets (< >)
+        
+        // --- MEDIA & BROWSER KEYS ---
         "VOLU": "C_VOL_UP", "AUDIO_VOL_UP": "C_VOL_UP",
-        "VOLD": "C_VOL_DN", "AUDIO_VOL_DOWN": "C_VOL_DN",
+        "VOLD": "C_VOL_DN", "AUDIO_VOL_DOWN": "C_VOL_DN", "C_VOL_DOWN": "C_VOL_DN",
         "MUTE": "C_MUTE", "AUDIO_MUTE": "C_MUTE",
         "MPLY": "C_PP", "MEDIA_PLAY_PAUSE": "C_PP",
         "MNXT": "C_NEXT", "MEDIA_NEXT_TRACK": "C_NEXT",
         "MPRV": "C_PREV", "MEDIA_PREV_TRACK": "C_PREV",
         "MSTP": "C_STOP", "MEDIA_STOP": "C_STOP",
+        "MFFD": "C_FF", "MEDIA_FAST_FORWARD": "C_FF",
+        "MRWD": "C_RW", "MEDIA_REWIND": "C_RW",
         "BRIU": "C_BRI_UP", "BRIGHTNESS_UP": "C_BRI_UP",
         "BRID": "C_BRI_DN", "BRIGHTNESS_DOWN": "C_BRI_DN",
+        "WBAK": "C_AC_BACK", "WWW_BACK": "C_AC_BACK",
+        "WFWD": "C_AC_FORWARD", "WWW_FORWARD": "C_AC_FORWARD",
+        "WREF": "C_AC_REFRESH", "WWW_REFRESH": "C_AC_REFRESH",
+        "WSCH": "C_AC_SEARCH", "WWW_SEARCH": "C_AC_SEARCH",
+        "WHOM": "C_AC_HOME", "WWW_HOME": "C_AC_HOME",
         
-        // Numpad
+        // --- NUMPAD ---
         "P1": "KP_N1", "P2": "KP_N2", "P3": "KP_N3", "P4": "KP_N4", "P5": "KP_N5", 
         "P6": "KP_N6", "P7": "KP_N7", "P8": "KP_N8", "P9": "KP_N9", "P0": "KP_N0",
         "KP_1": "KP_N1", "KP_2": "KP_N2", "KP_3": "KP_N3", "KP_4": "KP_N4", "KP_5": "KP_N5", 
@@ -80,11 +103,28 @@ export const Constants = {
         "PEQL": "KP_EQUAL", "KP_EQUAL": "KP_EQUAL",
         "NUM": "KP_NUM",
         
-        // Special & System
+        // --- ZSA OS-SPECIFIC MACROS ---
+        "PC_COPY": "K_COPY", "MAC_COPY": "K_COPY",
+        "PC_PASTE": "K_PASTE", "MAC_PASTE": "K_PASTE",
+        "PC_CUT": "K_CUT", "MAC_CUT": "K_CUT",
+        "PC_UNDO": "K_UNDO", "MAC_UNDO": "K_UNDO",
+        
+        // --- INTERNATIONAL (From your source) ---
+        "FR_SCLN": "M", "FR_COLN": "DOT", "FR_EXLM": "FSLH", "FR_EQL": "EQUAL", 
+        "FR_UGRV": "SQT", "FR_RPRN": "MINUS",
+        "SE_ADIA": "SQT", "SE_MINS": "FSLH", "SE_ACUT": "EQUAL", "SE_LESS_MAC": "GRAVE",
+        
+        // --- SYSTEM & SPECIAL ---
         "NO": "none", "XXXXXXX": "none",
         "TRNS": "trans", "TRANSPARENT": "trans",
         "PSCR": "PSCRN", "PSCRN": "PSCRN", 
         "PAUS": "PAUSE_BREAK", "PAUSE_BREAK": "PAUSE_BREAK", 
-        "SLCK": "SLCK", "CAPS": "CAPS", "INS": "INS"
+        "SLCK": "SLCK", "CAPS": "CAPS", "INS": "INS",
+        "APP": "K_APP", "APPLICATION": "K_APP",
+        "CALC": "C_AL_CALC", "CALCULATOR": "C_AL_CALC",
+        "MYCM": "C_AL_MY_COMPUTER", "MY_COMPUTER": "C_AL_MY_COMPUTER",
+        "MAIL": "C_AL_EMAIL",
+        "NUHS": "NON_US_HASH", "NONUS_HASH": "NON_US_HASH", 
+        "NUBS": "NON_US_BSLH", "NONUS_BSLASH": "NON_US_BSLH"
     }
 };
