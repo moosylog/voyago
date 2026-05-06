@@ -99,10 +99,9 @@ export const UI = {
             if (Object.keys(logCat).length === 0) return `<div class="empty-state">🎉 Clean conversion!</div>`;
             return `<div class="flex flex-col gap-3 p-4">` + Object.entries(logCat).map(([original, data]) => {
                 
-                // 🟢 BUILD THE NEW CONTEXT HTML
                 let contextHtml = '';
                 if (data.contexts && data.contexts.length > 0) {
-                    let uniqueOccurrences = [...new Set(data.contexts.filter(c => c && c.layer !== null && c.key !== null).map(c => `Layer ${c.layer}, Key ${c.key}`))];
+                    let uniqueOccurrences = [...new Set(data.contexts.filter(c => c && c.layer !== undefined && c.layer !== null && c.key !== undefined && c.key !== null).map(c => `Layer ${c.layer}, Position ${c.key}`))];
                     let occurrencesStr = uniqueOccurrences.join(' &bull; ');
                     
                     let foundConfig = data.contexts.find(c => c && c.config)?.config;
@@ -116,8 +115,8 @@ export const UI = {
 
                     if (occurrencesStr || configHtml) {
                         contextHtml = `
-                            <div class="mt-3 pt-3 border-t border-slate-200/60">
-                                ${occurrencesStr ? `<strong class="block text-[11px] uppercase tracking-wider text-slate-500 mb-1.5">Locations in Source</strong><p class="text-xs text-slate-600 font-medium">${occurrencesStr}</p>` : ''}
+                            <div class="mt-4 pt-4 border-t border-slate-200/60">
+                                ${occurrencesStr ? `<strong class="block text-[11px] uppercase tracking-wider text-slate-500 mb-1.5">Locations in Source</strong><p class="text-[13px] text-slate-600 font-medium">${occurrencesStr}</p>` : ''}
                                 ${configHtml}
                             </div>
                         `;
@@ -134,9 +133,9 @@ export const UI = {
                         <span class="bg-slate-100 text-slate-500 text-[11px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider">${data.count} Instances</span>
                     </summary>
                     <div class="p-5 border-t border-slate-100 bg-slate-50/50 rounded-b-xl">
-                        <div class="mb-3">
+                        <div class="mb-4">
                             <strong class="block text-[11px] uppercase tracking-wider text-slate-500 mb-1.5">ZMK Replacement Suggestion</strong>
-                            <p class="text-sm text-slate-800 font-medium">${MainUtils.escapeHTML(data.reason)}</p>
+                            <p class="text-[13px] text-slate-800 font-medium leading-relaxed">${MainUtils.escapeHTML(data.reason)}</p>
                         </div>
                         <div>
                             <strong class="block text-[11px] uppercase tracking-wider text-slate-500 mb-1.5">Exact Voyager Code</strong>
