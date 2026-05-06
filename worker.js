@@ -217,20 +217,16 @@ const Parser = {
         if (!str) return { value: "none" };
         str = str.trim();
         if (state.defines[str] !== undefined) str = state.defines[str];
-        
-        // 🟢 EXPLICIT AST INJECTION FOR HYPR AND MEH MODIFIERS
-        if (str === 'MOD_HYPR' || str === 'KC_HYPR' || str === 'ALL_T') {
-            return { value: "LC", params: [{ value: "LS", params: [{ value: "LA", params: [{ value: "LGUI" }] }] }] };
-        }
-        if (str === 'MOD_MEH' || str === 'KC_MEH' || str === 'MEH_T') {
-            return { value: "LC", params: [{ value: "LS", params: [{ value: "LALT" }] }] };
-        }
+
+        // 🟢 INTERCEPT AND EXPAND BARE MODIFIERS BEFORE THE REGEX
+        if (str === 'MOD_HYPR' || str === 'KC_HYPR' || str === 'HYPR') str = 'LS(LC(LA(LGUI)))';
+        if (str === 'MOD_MEH' || str === 'KC_MEH' || str === 'MEH') str = 'LS(LC(LALT))';
         
         if (Constants.DEALBREAKER_KEYS.some(bad => str.includes(bad))) {
             Utils.logConversion(state, str, "&none", "warning", Utils.getZmkSuggestion(str), context);
             return { value: "none" }; 
         }
-        
+
         let wrapMatch = str.match(/^([A-Z0-9_]+)\((.*)\)$/i);
         if (wrapMatch) {
             let func = wrapMatch[1].toUpperCase();
@@ -239,6 +235,7 @@ const Parser = {
             let inner = Parser.parseMacroParam(wrapMatch[2], state, context);
             return inner?.value === "none" ? { value: "none" } : { value: func, params: [inner] };
         }
+        
         let resolved = Parser.resolveZmkKeycode(str, str, state, context);
         if (['MB1', 'MB2', 'MB3', 'MB4', 'MB5', 'MOVE_UP', 'MOVE_DOWN', 'MOVE_LEFT', 'MOVE_RIGHT', 'SCRL_UP', 'SCRL_DOWN', 'SCRL_LEFT', 'SCRL_RIGHT'].includes(resolved)) {
             Utils.logConversion(state, str, "&none", "warning", Utils.getZmkSuggestion(str), context);
@@ -251,19 +248,13 @@ const Parser = {
         if (!rawToken) return { value: "&none" };
         let tok = rawToken.trim();
 
+        // 🟢 INTERCEPT AND EXPAND BARE MODIFIERS BEFORE THE REGEX
+        if (tok === 'MOD_HYPR' || tok === 'KC_HYPR' || tok === 'HYPR') tok = 'LS(LC(LA(LGUI)))';
+        if (tok === 'MOD_MEH' || tok === 'KC_MEH' || tok === 'MEH') tok = 'LS(LC(LALT))';
+
         let configInfo = Parser.getConfigForToken(rawToken, state);
         let positionName = layerIdx === "Combo" ? "Inside Combo" : Utils.getVoyagerPosition(keyIdx);
         const context = { layer: layerIdx, pos: positionName, config: configInfo };
-        
-        // 🟢 EXPLICIT AST INJECTION FOR HYPR AND MEH BINDINGS
-        if (tok === 'MOD_HYPR' || tok === 'KC_HYPR') {
-            Utils.logConversion(state, rawToken, "&kp HYPR", "layer_binding", "", context);
-            return { value: "&kp", params: [{ value: "LC", params: [{ value: "LS", params: [{ value: "LA", params: [{ value: "LGUI" }] }] }] }] };
-        }
-        if (tok === 'MOD_MEH' || tok === 'KC_MEH') {
-            Utils.logConversion(state, rawToken, "&kp MEH", "layer_binding", "", context);
-            return { value: "&kp", params: [{ value: "LC", params: [{ value: "LS", params: [{ value: "LALT" }] }] }] };
-        }
         
         if (Constants.DEALBREAKER_KEYS.some(bad => tok.includes(bad))) {
             Utils.logConversion(state, rawToken, "&none", "warning", Utils.getZmkSuggestion(rawToken), context);
