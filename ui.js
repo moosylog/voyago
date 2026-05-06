@@ -99,30 +99,30 @@ export const UI = {
             if (Object.keys(logCat).length === 0) return `<div class="empty-state">🎉 Clean conversion!</div>`;
             return `<div class="flex flex-col gap-3 p-4">` + Object.entries(logCat).map(([original, data]) => {
                 
-                // 🟢 BUILD THE NEW CONTEXT HTML
+                // 🟢 BUILD THE NEW CONTEXT HTML (POSITION + RAW C CONFIG)
                 let contextHtml = '';
                 if (data.contexts && data.contexts.length > 0) {
                     let uniqueOccurrences = [...new Set(data.contexts.map(c => {
                         if (c.layer === 'Combo') return 'Used inside an Auto-Generated Combo';
-                        if (c.layer !== null && c.layer !== undefined && c.key !== null && c.key !== undefined) return `Layer ${c.layer}, Position ${c.key}`;
+                        if (c.layer !== null && c.layer !== undefined && c.pos) return `Layer ${c.layer} ➔ ${c.pos}`;
                         return null;
                     }).filter(Boolean))];
                     
-                    let occurrencesStr = uniqueOccurrences.join(' &bull; ');
+                    let occurrencesStr = uniqueOccurrences.join('<br>');
                     let foundConfig = data.contexts.find(c => c && c.config)?.config;
                     
                     let configHtml = '';
                     if (foundConfig) {
                         configHtml = `
-                            <strong class="block text-[11px] uppercase tracking-wider text-slate-500 mt-3 mb-1.5">ZSA Configuration Found</strong>
-                            <pre class="block w-full p-4 bg-slate-900 text-purple-300 rounded-lg text-[11px] font-mono shadow-inner overflow-x-auto whitespace-pre-wrap">${MainUtils.escapeHTML(foundConfig)}</pre>
+                            <strong class="block text-[11px] uppercase tracking-wider text-slate-500 mt-3 mb-1.5">Hidden ZSA Configuration Extracted</strong>
+                            <pre class="block w-full p-4 bg-slate-900 text-blue-300 rounded-lg text-[12px] font-mono shadow-inner overflow-x-auto whitespace-pre-wrap">${MainUtils.escapeHTML(foundConfig)}</pre>
                         `;
                     }
 
                     if (occurrencesStr || configHtml) {
                         contextHtml = `
                             <div class="mt-4 pt-4 border-t border-slate-200/60">
-                                ${occurrencesStr ? `<strong class="block text-[11px] uppercase tracking-wider text-slate-500 mb-1.5">Locations in Source</strong><p class="text-[13px] text-slate-600 font-medium">${occurrencesStr}</p>` : ''}
+                                ${occurrencesStr ? `<strong class="block text-[11px] uppercase tracking-wider text-slate-500 mb-1.5">Hardware Locations in Source</strong><p class="text-[13px] text-slate-600 font-medium leading-relaxed">${occurrencesStr}</p>` : ''}
                                 ${configHtml}
                             </div>
                         `;
