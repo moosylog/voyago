@@ -8,10 +8,15 @@ const Utils = {
             return v.toString(16);
         });
     },
-    logConversion: (state, original, translated, category, reason = "") => {
+    logConversion: (state, original, translated, category, reason = "", context = null) => {
         if (!state.log[category]) state.log[category] = {};
-        if (!state.log[category][original]) state.log[category][original] = { translated, count: 0, reason };
+        if (!state.log[category][original]) state.log[category][original] = { translated, count: 0, reason, contexts: [] };
         state.log[category][original].count++;
+        
+        // Track deep context for action-required items
+        if (context && category === 'warning') {
+            state.log[category][original].contexts.push(context);
+        }
     },
     hsvToHex: (h, s, v) => {
         let s_pct = s / 255, v_pct = v / 255, h_deg = h * 360 / 255;
@@ -96,7 +101,7 @@ const Parser = {
                 
                 if (comboDefs[comboName]) {
                     let positions = comboDefs[comboName].map(k => {
-                        let zmkTarget = Parser.translateAst(k, state);
+                        let zmkTarget = Parser.translateAst(k, state, "Combo", null);
                         
                         if (zmkTarget?.value === "&none" || zmkTarget?.value === "none") return -1;
 
@@ -113,7 +118,7 @@ const Parser = {
                         });
                     }).filter(p => p !== -1);
 
-                    let finalBinding = Parser.translateAst(resultKey, state);
+                    let finalBinding = Parser.translateAst(resultKey, state, "Combo", null);
                     
                     if (positions.length === comboDefs[comboName].length) {
                         if (finalBinding?.value === "&none" || finalBinding?.value === "none") {
@@ -135,7 +140,7 @@ const Parser = {
         return combos;
     },
 
-    resolveZmkKeycode: (str, rawToken, state) => {
+    resolveZmkKeycode: (str, rawToken, state, context) => {
         if (!str) return "none";
         let clean = str.replace(/^KC_/, '').replace(/^X_/, '').trim();
         if (/^[0-9]$/.test(clean)) return `N${clean}`;
@@ -145,21 +150,21 @@ const Parser = {
         
         if (clean.startsWith('RGB_')) return clean;
         if (clean.startsWith('STN_') || clean.startsWith('QK_STENO') || clean.startsWith('DM_') || clean.startsWith('HSV_') || clean === 'LED_LEVEL') {
-            Utils.logConversion(state, rawToken || str, "&none", "warning", Utils.getZmkSuggestion(rawToken || str));
+            Utils.logConversion(state, rawToken || str, "&none", "warning", Utils.getZmkSuggestion(rawToken || str), context);
             return "none";
         }
         
-        Utils.logConversion(state, rawToken || str, "&none", "warning", Utils.getZmkSuggestion(rawToken || str));
+        Utils.logConversion(state, rawToken || str, "&none", "warning", Utils.getZmkSuggestion(rawToken || str), context);
         return "none";
     },
 
-    parseMacroParam: (str, state) => {
+    parseMacroParam: (str, state, context) => {
         if (!str) return { value: "none" };
         str = str.trim();
         if (state.defines[str] !== undefined) str = state.defines[str];
         
         if (Constants.DEALBREAKER_KEYS.some(bad => str.includes(bad))) {
-            Utils.logConversion(state, str, "&none", "warning", Utils.getZmkSuggestion(str));
+            Utils.logConversion(state, str, "&none", "warning", Utils.getZmkSuggestion(str), context);
             return { value: "none" }; 
         }
 
@@ -168,24 +173,36 @@ const Parser = {
             let func = wrapMatch[1].toUpperCase();
             let modMap = {"LSFT":"LS", "LCTL":"LC", "LALT":"LA", "LGUI":"LG", "LCMD":"LG", "LWIN":"LG", "LOPT":"LA", "RSFT":"RS", "RCTL":"RC", "RALT":"RA", "RGUI":"RG", "RCMD":"RG", "RWIN":"RG", "ROPT":"RA", "S":"LS", "C":"LC", "A":"LA", "G":"LG", "ALGR":"RA"}; 
             if (modMap[func]) func = modMap[func];
-            let inner = Parser.parseMacroParam(wrapMatch[2], state);
+            let inner = Parser.parseMacroParam(wrapMatch[2], state, context);
             return inner?.value === "none" ? { value: "none" } : { value: func, params: [inner] };
         }
         
-        let resolved = Parser.resolveZmkKeycode(str, str, state);
+        let resolved = Parser.resolveZmkKeycode(str, str, state, context);
         if (['MB1', 'MB2', 'MB3', 'MB4', 'MB5', 'MOVE_UP', 'MOVE_DOWN', 'MOVE_LEFT', 'MOVE_RIGHT', 'SCRL_UP', 'SCRL_DOWN', 'SCRL_LEFT', 'SCRL_RIGHT'].includes(resolved)) {
-            Utils.logConversion(state, str, "&none", "warning", Utils.getZmkSuggestion(str));
+            Utils.logConversion(state, str, "&none", "warning", Utils.getZmkSuggestion(str), context);
             return { value: "none" };
         }
         return { value: resolved };
     },
 
-    translateAst: (rawToken, state) => {
+    translateAst: (rawToken, state, layerIdx = null, keyIdx = null) => {
         if (!rawToken) return { value: "&none" };
         let tok = rawToken.trim();
+
+        // Check if we extracted deeper configuration for this key in the pre-parse
+        let configInfo = null;
+        let cleanTok = tok.replace(/^TD\(/, '').replace(/\)$/, '').trim();
+        if (state.tapDances && state.tapDances[cleanTok]) {
+            configInfo = state.tapDances[cleanTok];
+        } else if (state.macros && state.macros[cleanTok]) {
+            configInfo = `SEND_STRING(${state.macros[cleanTok]})`;
+        }
+        
+        // Build the rich context for logging
+        const context = { layer: layerIdx, key: keyIdx, config: configInfo };
         
         if (Constants.DEALBREAKER_KEYS.some(bad => tok.includes(bad))) {
-            Utils.logConversion(state, rawToken, "&none", "warning", Utils.getZmkSuggestion(rawToken));
+            Utils.logConversion(state, rawToken, "&none", "warning", Utils.getZmkSuggestion(rawToken), context);
             return { value: "&none" };
         }
 
@@ -201,7 +218,7 @@ const Parser = {
             if (modMap[func]) func = modMap[func];
 
             if (func === 'OSM') {
-                let p0 = Parser.parseMacroParam(innerTokens[0], state);
+                let p0 = Parser.parseMacroParam(innerTokens[0], state, context);
                 if (!p0 || p0.value === "none") return { value: "&none" }; 
                 Utils.logConversion(state, rawToken, "&sk", "hold_tap");
                 return { value: "&sk", params: [p0] };
@@ -212,7 +229,7 @@ const Parser = {
                     ? { value: "LC", params: [{ value: "LS", params: [{ value: "LALT" }] }] }
                     : { value: "LC", params: [{ value: "LS", params: [{ value: "LA", params: [{ value: "LGUI" }] }] }] };
                 
-                let p0 = Parser.parseMacroParam(innerTokens[0], state);
+                let p0 = Parser.parseMacroParam(innerTokens[0], state, context);
                 if (!p0 || p0.value === "none") return { value: "&none" };
                 
                 Utils.logConversion(state, rawToken, `&mt HYPR/MEH`, "hold_tap");
@@ -226,12 +243,12 @@ const Parser = {
                     let layerNum = state.defines[p0] !== undefined ? state.defines[p0] : parseInt(p0);
                     params.push({ value: isNaN(layerNum) ? p0 : layerNum });
                 } else if (func === 'MT') {
-                    let p0 = Parser.parseMacroParam(innerTokens[0], state);
+                    let p0 = Parser.parseMacroParam(innerTokens[0], state, context);
                     if (!p0 || p0.value === "none") return { value: "&none" };
                     params.push(p0);
                 }
                 if (innerTokens.length > 1) {
-                    let p1 = Parser.parseMacroParam(innerTokens[1], state);
+                    let p1 = Parser.parseMacroParam(innerTokens[1], state, context);
                     if (!p1 || p1.value === "none") return { value: "&none" }; 
                     params.push(p1);
                 }
@@ -240,7 +257,7 @@ const Parser = {
                 return { value: zmkFunc, params };
             }
             
-            let parsedParams = innerTokens.map(p => Parser.parseMacroParam(p, state)).filter(p => p && p.value !== "none");
+            let parsedParams = innerTokens.map(p => Parser.parseMacroParam(p, state, context)).filter(p => p && p.value !== "none");
             if (parsedParams.length === 0) return { value: "&none" };
 
             if (['LS', 'LC', 'LA', 'LG', 'RS', 'RC', 'RA', 'RG', 'S', 'C', 'A', 'G', 'ALGR'].includes(func)) {
@@ -251,7 +268,7 @@ const Parser = {
             return { value: `&${func.toLowerCase()}`, params: parsedParams };
         }
 
-        let bareResolved = Parser.resolveZmkKeycode(tok, rawToken, state);
+        let bareResolved = Parser.resolveZmkKeycode(tok, rawToken, state, context);
         if (bareResolved === "trans" || bareResolved === "none") return { value: `&${bareResolved}` };
         if (bareResolved === "CW_TOGG") { Utils.logConversion(state, rawToken, "&caps_word", "layer_binding"); return { value: "&caps_word" }; }
         if (bareResolved === "QK_BOOT" || bareResolved === "RESET") { Utils.logConversion(state, rawToken, "&bootloader", "layer_binding"); return { value: "&bootloader" }; }
@@ -262,7 +279,7 @@ const Parser = {
                 Utils.logConversion(state, rawToken, mappedRgb, "layer_binding");
                 return { value: "&rgb_ug", params: [{value: mappedRgb}] };
             }
-            Utils.logConversion(state, rawToken, "&none", "warning", "RGB animation is a proprietary feature.");
+            Utils.logConversion(state, rawToken, "&none", "warning", "RGB animation is a proprietary feature.", context);
             return { value: "&none" };
         }
         
@@ -280,7 +297,7 @@ self.onmessage = function(e) {
     try {
         if (!rawText) throw new Error("No source code text provided to the parser.");
 
-        const state = { log: { layer_binding: {}, hold_tap: {}, combo: {}, warning: {} }, macros: {}, config: { tappingTerm: 200, comboTerm: 50 }, defines: {} };
+        const state = { log: { layer_binding: {}, hold_tap: {}, combo: {}, warning: {} }, macros: {}, tapDances: {}, config: { tappingTerm: 200, comboTerm: 50 }, defines: {} };
         const cleanText = Parser.prepareCCode(rawText);
 
         const tapMatch = cleanText.match(/#define\s+TAPPING_TERM\s+(\d+)/);
@@ -292,6 +309,15 @@ self.onmessage = function(e) {
 
         const macroRegex = /case\s+(ST_MACRO_\d+):[\s\S]*?SEND_STRING\((.*?)\);[\s\S]*?break;/g; let macMatch;
         while ((macMatch = macroRegex.exec(cleanText)) !== null) state.macros[macMatch[1]] = macMatch[2].trim();
+
+        // 🟢 EXTRACT TAP DANCES
+        const tdBlockMatch = cleanText.match(/qk_tap_dance_action_t\s+tap_dance_actions\[\]\s*=\s*\{([\s\S]*?)\};/);
+        if (tdBlockMatch) {
+            const tdMatches = tdBlockMatch[1].matchAll(/\[\s*([a-zA-Z0-9_]+)\s*\]\s*=\s*([\s\S]*?)(?=,\s*\[|\s*\})/g);
+            for (const match of tdMatches) {
+                state.tapDances[match[1].trim()] = match[2].trim();
+            }
+        }
 
         const ledmapColors = Parser.extractLedmap(cleanText);
 
@@ -308,7 +334,8 @@ self.onmessage = function(e) {
         if (!rawLayers.length) throw new Error("No LAYOUT_voyager blocks found in the C code.");
 
         const astLayers = rawLayers.map((layerStr, layerIdx) => {
-            const astKeys = Parser.splitQmkKeys(layerStr).map(tok => Parser.translateAst(tok, state));
+            // 🟢 PASS LAYER AND KEY INDEX INTO THE PARSER
+            const astKeys = Parser.splitQmkKeys(layerStr).map((tok, keyIdx) => Parser.translateAst(tok, state, layerIdx, keyIdx));
             
             if (ledmapColors[layerIdx]) {
                 ledmapColors[layerIdx].forEach((colorObj, keyIdx) => {
