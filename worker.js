@@ -97,7 +97,9 @@ const Parser = {
         let extractKeys = (str) => {
             let res = [str];
             let match = str.match(/^[A-Z0-9_]+\((.*)\)$/i);
-            if (match) res.push(...Parser.splitQmkKeys(match[1]));
+            if (match) {
+                res.push(...Parser.splitQmkKeys(match[1]));
+            }
             return res.map(s => s.trim());
         };
         
@@ -138,7 +140,6 @@ const Parser = {
             let blockStr = combosBlock[1];
             let searchIdx = 0;
             
-            // Safe manual bracket parser to perfectly extract COMBO(name, action)
             while ((searchIdx = blockStr.indexOf('COMBO', searchIdx)) !== -1) {
                 let start = blockStr.indexOf('(', searchIdx);
                 if (start === -1) break;
@@ -216,10 +217,16 @@ const Parser = {
         if (!str) return { value: "none" };
         str = str.trim();
         if (state.defines[str] !== undefined) str = state.defines[str];
+        
+        // 🟢 FORCE EXPANSION OF BARE ALIASES BEFORE REGEX MATCH
+        if (str === 'MOD_HYPR' || str === 'KC_HYPR') str = 'LC(LS(LA(LGUI)))';
+        if (str === 'MOD_MEH' || str === 'KC_MEH') str = 'LC(LS(LALT))';
+        
         if (Constants.DEALBREAKER_KEYS.some(bad => str.includes(bad))) {
             Utils.logConversion(state, str, "&none", "warning", Utils.getZmkSuggestion(str), context);
             return { value: "none" }; 
         }
+        
         let wrapMatch = str.match(/^([A-Z0-9_]+)\((.*)\)$/i);
         if (wrapMatch) {
             let func = wrapMatch[1].toUpperCase();
@@ -239,6 +246,10 @@ const Parser = {
     translateAst: (rawToken, state, layerIdx = null, keyIdx = null) => {
         if (!rawToken) return { value: "&none" };
         let tok = rawToken.trim();
+
+        // 🟢 FORCE EXPANSION OF BARE ALIASES BEFORE REGEX MATCH
+        if (tok === 'MOD_HYPR' || tok === 'KC_HYPR') tok = 'LC(LS(LA(LGUI)))';
+        if (tok === 'MOD_MEH' || tok === 'KC_MEH') tok = 'LC(LS(LALT))';
 
         let configInfo = Parser.getConfigForToken(rawToken, state);
         let positionName = layerIdx === "Combo" ? "Inside Combo" : Utils.getVoyagerPosition(keyIdx);
