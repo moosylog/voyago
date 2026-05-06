@@ -11,7 +11,6 @@ export const Constants = {
     RGB_MAP: { "RGB_VAI": "RGB_BRI", "RGB_VAD": "RGB_BRD", "RGB_MODE_FORWARD": "RGB_EFF", "RGB_MODE_REVERSE": "RGB_EFR", "RGB_MOD": "RGB_EFF", "RGB_RMOD": "RGB_EFR" },
     
     QMK_TO_ZMK_MAP: {
-        // --- BASIC KEYS ---
         "ENT": "ENTER", "RET": "ENTER", "ENTER": "ENTER",
         "ESC": "ESC", "ESCAPE": "ESC",
         "SPC": "SPACE", "SPACE": "SPACE",
@@ -19,13 +18,11 @@ export const Constants = {
         "DEL": "DELETE", "DELETE": "DELETE",
         "TAB": "TAB",
         
-        // --- NAVIGATION ---
         "UP": "UP", "DOWN": "DOWN", "LEFT": "LEFT", "RGHT": "RIGHT", "RIGHT": "RIGHT",
         "PGUP": "PG_UP", "PAGE_UP": "PG_UP", 
         "PGDN": "PG_DN", "PAGE_DOWN": "PG_DN",
         "HOME": "HOME", "END": "END",
         
-        // --- MODIFIERS (Including ZSA MOD_ aliases) ---
         "LSFT": "LSHIFT", "LSHFT": "LSHIFT", "LEFT_SHIFT": "LSHIFT", "MOD_LSFT": "LSHIFT",
         "LCTL": "LCTRL", "LEFT_CTRL": "LCTRL", "MOD_LCTL": "LCTRL",
         "LALT": "LALT", "LEFT_ALT": "LALT", "LOPT": "LALT", "MOD_LALT": "LALT",
@@ -34,9 +31,7 @@ export const Constants = {
         "RCTL": "RCTRL", "RIGHT_CTRL": "RCTRL", "MOD_RCTL": "RCTRL",
         "RALT": "RALT", "RIGHT_ALT": "RALT", "ROPT": "RALT", "ALGR": "RALT", "MOD_RALT": "RALT",
         "RGUI": "RGUI", "RIGHT_GUI": "RGUI", "RCMD": "RGUI", "RWIN": "RGUI", "MOD_RGUI": "RGUI",
-        "MOD_HYPR": "LC(LS(LA(LGUI)))", "MOD_MEH": "LC(LS(LALT))",
         
-        // --- SYMBOLS & SHIFTED CHARACTERS ---
         "AT": "AT", 
         "HASH": "HASH", 
         "DLR": "DOLLAR", "DLLR": "DOLLAR",
@@ -46,7 +41,6 @@ export const Constants = {
         "ASTR": "ASTERISK", "STAR": "ASTERISK",
         "CIRC": "CARET",
         
-        // --- PUNCTUATION (QMK to ZMK) ---
         "MINS": "MINUS", "MINUS": "MINUS", 
         "PLUS": "PLUS", 
         "EQL": "EQUAL", "EQUAL": "EQUAL",
@@ -65,12 +59,10 @@ export const Constants = {
         "COLN": "COLON", "COLON": "COLON", 
         "SCLN": "SEMI", "SEMI": "SEMI",
         
-        // --- BRACKETS VS BRACES TRAP ---
-        "LBRC": "LBKT", "RBRC": "RBKT", // Square Brackets
-        "LCBR": "LBRC", "RCBR": "RBRC", // Curly Braces
-        "LABK": "LT", "RABK": "GT",     // Angle Brackets (< >)
+        "LBRC": "LBKT", "RBRC": "RBKT", 
+        "LCBR": "LBRC", "RCBR": "RBRC", 
+        "LABK": "LT", "RABK": "GT",     
         
-        // --- MEDIA & BROWSER KEYS ---
         "VOLU": "C_VOL_UP", "AUDIO_VOL_UP": "C_VOL_UP",
         "VOLD": "C_VOL_DN", "AUDIO_VOL_DOWN": "C_VOL_DN", "C_VOL_DOWN": "C_VOL_DN",
         "MUTE": "C_MUTE", "AUDIO_MUTE": "C_MUTE",
@@ -88,7 +80,6 @@ export const Constants = {
         "WSCH": "C_AC_SEARCH", "WWW_SEARCH": "C_AC_SEARCH",
         "WHOM": "C_AC_HOME", "WWW_HOME": "C_AC_HOME",
         
-        // --- NUMPAD ---
         "P1": "KP_N1", "P2": "KP_N2", "P3": "KP_N3", "P4": "KP_N4", "P5": "KP_N5", 
         "P6": "KP_N6", "P7": "KP_N7", "P8": "KP_N8", "P9": "KP_N9", "P0": "KP_N0",
         "KP_1": "KP_N1", "KP_2": "KP_N2", "KP_3": "KP_N3", "KP_4": "KP_N4", "KP_5": "KP_N5", 
@@ -102,18 +93,15 @@ export const Constants = {
         "PEQL": "KP_EQUAL", "KP_EQUAL": "KP_EQUAL",
         "NUM": "KP_NUM",
         
-        // --- ZSA OS-SPECIFIC MACROS ---
         "PC_COPY": "K_COPY", "MAC_COPY": "K_COPY",
         "PC_PASTE": "K_PASTE", "MAC_PASTE": "K_PASTE",
         "PC_CUT": "K_CUT", "MAC_CUT": "K_CUT",
         "PC_UNDO": "K_UNDO", "MAC_UNDO": "K_UNDO",
         
-        // --- INTERNATIONAL ---
         "FR_SCLN": "M", "FR_COLN": "DOT", "FR_EXLM": "FSLH", "FR_EQL": "EQUAL", 
         "FR_UGRV": "SQT", "FR_RPRN": "MINUS",
         "SE_ADIA": "SQT", "SE_MINS": "FSLH", "SE_ACUT": "EQUAL", "SE_LESS_MAC": "GRAVE",
         
-        // --- SYSTEM & SPECIAL ---
         "NO": "none", "XXXXXXX": "none",
         "TRNS": "trans", "TRANSPARENT": "trans",
         "PSCR": "PSCRN", "PSCRN": "PSCRN", 
