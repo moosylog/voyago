@@ -350,7 +350,6 @@ self.onmessage = function(e) {
             }
         }
 
-        // 🟢 BRUTE FORCE ZSA C-BLOCK EXTRACTOR
         const extractBraceBlockRaw = (text, startIdx) => {
             let start = text.indexOf('{', startIdx);
             if (start === -1) return null;
@@ -392,13 +391,22 @@ self.onmessage = function(e) {
             }
         }
 
-        // 3. Grab Generic Switch Cases from Raw Text (Custom Keycodes)
-        let caseRegexRaw = /case\s+([A-Za-z0-9_]+)\s*:([\s\S]*?)(?=case\s+[A-Za-z0-9_]+\s*:|break;|return\s+true;|return\s+false;)/g;
-        while ((match = caseRegexRaw.exec(rawText)) !== null) {
+        // 3. 🟢 SAFE SWITCH CASE GRABBER (No Regex Backtracking)
+        let caseRegexFast = /case\s+([A-Za-z0-9_]+)\s*:/g;
+        while ((match = caseRegexFast.exec(rawText)) !== null) {
             let name = match[1];
-            let block = match[2].trim();
-            if (block && !state.macros[name]) {
-                state.customCases[name] = block;
+            // Skip massive generic blocks to avoid hanging
+            if (name.startsWith('ST_MACRO_') || name.startsWith('TD_') || name.startsWith('KC_')) continue;
+            
+            let start = match.index + match[0].length;
+            let end = rawText.indexOf('break;', start);
+            
+            // Only grab the block if there is a 'break;' within 1000 characters
+            if (end !== -1 && (end - start) < 1000) {
+                let block = rawText.substring(start, end).trim();
+                if (block && !state.macros[name]) {
+                    state.customCases[name] = block;
+                }
             }
         }
 
