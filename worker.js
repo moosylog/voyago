@@ -97,9 +97,7 @@ const Parser = {
         let extractKeys = (str) => {
             let res = [str];
             let match = str.match(/^[A-Z0-9_]+\((.*)\)$/i);
-            if (match) {
-                res.push(...Parser.splitQmkKeys(match[1]));
-            }
+            if (match) res.push(...Parser.splitQmkKeys(match[1]));
             return res.map(s => s.trim());
         };
         
@@ -137,40 +135,62 @@ const Parser = {
 
         const combosBlock = cCode.match(/combo_t\s+[a-zA-Z0-9_]+[^=]*=\s*\{([\s\S]*?)\};/);
         if (combosBlock) {
-            const comboLineRegex = /COMBO\s*\(\s*([a-zA-Z0-9_]+)\s*,\s*([^)]+)\s*\)/g;
-            let cbMatch;
-            while ((cbMatch = comboLineRegex.exec(combosBlock[1])) !== null) {
-                let comboName = cbMatch[1]; let resultKey = cbMatch[2].trim();
-                if (comboDefs[comboName]) {
-                    let positions = comboDefs[comboName].map(k => {
-                        let zmkTarget = Parser.translateAst(k, state, "Combo", null);
-                        if (zmkTarget?.value === "&none" || zmkTarget?.value === "none") return -1;
-                        let targetKeyVal = (zmkTarget?.params && zmkTarget.params[0]) ? zmkTarget.params[0].value : null;
-                        return layer0Nodes.findIndex(node => {
-                            if (deepEqualAst(node, zmkTarget)) return true;
-                            if (['&mt', '&lt', '&sk'].includes(node?.value) && node?.params) {
-                                if (node.params.length > 1 && targetKeyVal && node.params[1]?.value === targetKeyVal) return true;
-                                if (node.params.length === 1 && targetKeyVal && node.params[0]?.value === targetKeyVal) return true;
-                            }
-                            return false;
-                        });
-                    }).filter(p => p !== -1);
+            let blockStr = combosBlock[1];
+            let searchIdx = 0;
+            
+            // Safe manual bracket parser to perfectly extract COMBO(name, action)
+            while ((searchIdx = blockStr.indexOf('COMBO', searchIdx)) !== -1) {
+                let start = blockStr.indexOf('(', searchIdx);
+                if (start === -1) break;
+                
+                let end = -1, depth = 0;
+                for (let i = start; i < blockStr.length; i++) {
+                    if (blockStr[i] === '(') depth++;
+                    if (blockStr[i] === ')') depth--;
+                    if (depth === 0) { end = i; break; }
+                }
+                
+                if (end !== -1) {
+                    let innerArgs = blockStr.substring(start + 1, end);
+                    let commaIdx = innerArgs.indexOf(',');
+                    
+                    if (commaIdx !== -1) {
+                        let comboName = innerArgs.substring(0, commaIdx).trim();
+                        let resultKey = innerArgs.substring(commaIdx + 1).trim();
+                        
+                        if (comboDefs[comboName]) {
+                            let positions = comboDefs[comboName].map(k => {
+                                let zmkTarget = Parser.translateAst(k, state, "Combo", null);
+                                if (zmkTarget?.value === "&none" || zmkTarget?.value === "none") return -1;
+                                let targetKeyVal = (zmkTarget?.params && zmkTarget.params[0]) ? zmkTarget.params[0].value : null;
+                                return layer0Nodes.findIndex(node => {
+                                    if (deepEqualAst(node, zmkTarget)) return true;
+                                    if (['&mt', '&lt', '&sk'].includes(node?.value) && node?.params) {
+                                        if (node.params.length > 1 && targetKeyVal && node.params[1]?.value === targetKeyVal) return true;
+                                        if (node.params.length === 1 && targetKeyVal && node.params[0]?.value === targetKeyVal) return true;
+                                    }
+                                    return false;
+                                });
+                            }).filter(p => p !== -1);
 
-                    let finalBinding = Parser.translateAst(resultKey, state, "Combo", null);
-                    if (positions.length === comboDefs[comboName].length) {
-                        if (finalBinding?.value === "&none" || finalBinding?.value === "none") {
-                            Utils.logConversion(state, `COMBO(${comboName})`, "Dropped", "warning", Utils.getZmkSuggestion(resultKey));
-                        } else {
-                            combos.push({
-                                name: comboName, description: `Migrated combo: ${comboName}`,
-                                binding: finalBinding, keyPositions: positions, timeoutMs: state.config.comboTerm, layers: [0] 
-                            });
-                            Utils.logConversion(state, `COMBO(${comboName})`, `[Pos: ${positions.join(', ')}] -> ${finalBinding.value}`, "combo");
+                            let finalBinding = Parser.translateAst(resultKey, state, "Combo", null);
+                            if (positions.length === comboDefs[comboName].length) {
+                                if (finalBinding?.value === "&none" || finalBinding?.value === "none") {
+                                    Utils.logConversion(state, `COMBO(${comboName})`, "Dropped", "warning", Utils.getZmkSuggestion(resultKey));
+                                } else {
+                                    combos.push({
+                                        name: comboName, description: `Migrated combo: ${comboName}`,
+                                        binding: finalBinding, keyPositions: positions, timeoutMs: state.config.comboTerm, layers: [0] 
+                                    });
+                                    Utils.logConversion(state, `COMBO(${comboName})`, `[Pos: ${positions.join(', ')}] -> ${finalBinding.value}`, "combo");
+                                }
+                            } else {
+                                Utils.logConversion(state, `COMBO(${comboName})`, "Dropped", "warning", "Could not map all source keys to the Base Layer matrix.");
+                            }
                         }
-                    } else {
-                        Utils.logConversion(state, `COMBO(${comboName})`, "Dropped", "warning", "Could not map all source keys to the Base Layer matrix.");
                     }
                 }
+                searchIdx = end !== -1 ? end : searchIdx + 5;
             }
         }
         return combos;
@@ -220,7 +240,6 @@ const Parser = {
         if (!rawToken) return { value: "&none" };
         let tok = rawToken.trim();
 
-        // 🟢 DEEP CONFIG EXTRACTION FOR CONTEXT
         let configInfo = Parser.getConfigForToken(rawToken, state);
         let positionName = layerIdx === "Combo" ? "Inside Combo" : Utils.getVoyagerPosition(keyIdx);
         const context = { layer: layerIdx, pos: positionName, config: configInfo };
@@ -339,7 +358,6 @@ self.onmessage = function(e) {
         const comboMatch = cleanText.match(/#define\s+COMBO_TERM\s+(\d+)/);
         if (comboMatch) state.config.comboTerm = parseInt(comboMatch[1]);
         
-        // Grab #defines for Logic (Clean text) and Display (Raw text)
         const defRegex = /#define\s+([A-Za-z0-9_]+)\s+([^\n\r]+)/g; let m;
         while ((m = defRegex.exec(cleanText)) !== null) state.defines[m[1]] = m[2].trim();
         
@@ -363,7 +381,6 @@ self.onmessage = function(e) {
             return null;
         };
 
-        // 1. Grab Oryx Custom Tap Dance Functions from Raw Text
         let tdRegex = /void\s+(dance_[a-zA-Z0-9_]+)_finished\s*\(/gi;
         let match;
         while ((match = tdRegex.exec(rawText)) !== null) {
@@ -381,7 +398,6 @@ self.onmessage = function(e) {
             }
         }
 
-        // 2. Grab Standard Macros from Raw Text
         let macroRegex = /case\s+(ST_MACRO_[a-zA-Z0-9_]+):/g;
         while ((match = macroRegex.exec(rawText)) !== null) {
             let start = match.index;
@@ -391,17 +407,14 @@ self.onmessage = function(e) {
             }
         }
 
-        // 3. 🟢 SAFE SWITCH CASE GRABBER (No Regex Backtracking)
         let caseRegexFast = /case\s+([A-Za-z0-9_]+)\s*:/g;
         while ((match = caseRegexFast.exec(rawText)) !== null) {
             let name = match[1];
-            // Skip massive generic blocks to avoid hanging
             if (name.startsWith('ST_MACRO_') || name.startsWith('TD_') || name.startsWith('KC_')) continue;
             
             let start = match.index + match[0].length;
             let end = rawText.indexOf('break;', start);
             
-            // Only grab the block if there is a 'break;' within 1000 characters
             if (end !== -1 && (end - start) < 1000) {
                 let block = rawText.substring(start, end).trim();
                 if (block && !state.macros[name]) {
