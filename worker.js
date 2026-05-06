@@ -1,194 +1,4 @@
-import { Constants } from './constants.js';
-
-const Utils = {
-    safeUUID: () => {
-        if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-            const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
-            return v.toString(16);
-        });
-    },
-    logConversion: (state, original, translated, category, reason = "", context = null) => {
-        if (!state.log[category]) state.log[category] = {};
-        if (!state.log[category][original]) state.log[category][original] = { translated, count: 0, reason, contexts: [] };
-        state.log[category][original].count++;
-        
-        if (context && category === 'warning') {
-            state.log[category][original].contexts.push(context);
-        }
-    },
-    hsvToHex: (h, s, v) => {
-        let s_pct = s / 255, v_pct = v / 255, h_deg = h * 360 / 255;
-        let c = v_pct * s_pct, x = c * (1 - Math.abs(((h_deg / 60) % 2) - 1)), m = v_pct - c;
-        let r = 0, g = 0, b = 0;
-        if (h_deg >= 0 && h_deg < 60) { r = c; g = x; b = 0; }
-        else if (h_deg >= 60 && h_deg < 120) { r = x; g = c; b = 0; }
-        else if (h_deg >= 120 && h_deg < 180) { r = 0; g = c; b = x; }
-        else if (h_deg >= 180 && h_deg < 240) { r = 0; g = x; b = c; }
-        else if (h_deg >= 240 && h_deg < 300) { r = x; g = 0; b = c; }
-        else { r = c; g = 0; b = x; }
-        r = Math.round((r + m) * 255); g = Math.round((g + m) * 255); b = Math.round((b + m) * 255);
-        return "#" + (1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1) + "ff"; 
-    },
-    getZmkSuggestion: (tok) => {
-        if (!tok) return "Requires a custom ZMK Behavior.";
-        if (tok.includes('TD(') || tok.includes('DANCE_')) return "Rebuild using ZMK Tap-Dance (&td) or Mod-Morph (&morph) inside the Layout Editor.";
-        if (tok.includes('QK_LLCK')) return "Rebuild using ZMK Sticky Layer (&sl) or Toggle Layer (&tog) in the Layout Editor.";
-        if (tok.includes('MAC_') || tok.includes('PC_')) return "Recreate as a custom ZMK Macro (&macro).";
-        if (tok.includes('NAVIGATOR') || tok.includes('MS_JIGGLER') || tok.includes('SCROLL')) return "Mouse feature. Requires native ZMK Mouse Keys bindings in the Layout Editor.";
-        if (tok.includes('LAYER_COLOR') || tok.includes('RGB')) return "Rebuild using ZMK RGB Underglow behaviors (&rgb_ug).";
-        if (tok.includes('LCTL(KC_MS') || tok.includes('LSFT(KC_MS')) return "ZMK cannot mix mouse clicks and keyboard modifiers on a single key. Rebuild as a ZMK Macro.";
-        return "Requires a custom ZMK Behavior or Macro setup in the Layout Editor.";
-    },
-    getVoyagerPosition: (idx) => {
-        if (idx === null || idx === undefined) return "Unknown";
-        if (idx < 26) { 
-            if (idx < 6) return `Left Hand, Top Row, Col ${idx + 1}`;
-            if (idx < 12) return `Left Hand, Upper Row, Col ${(idx - 6) + 1}`;
-            if (idx < 18) return `Left Hand, Home Row, Col ${(idx - 12) + 1}`;
-            if (idx < 24) return `Left Hand, Bottom Row, Col ${(idx - 18) + 1}`;
-            return `Left Hand, Thumb Cluster, Key ${(idx - 24) + 1}`;
-        } else { 
-            let rIdx = idx - 26;
-            if (rIdx < 6) return `Right Hand, Top Row, Col ${rIdx + 1}`;
-            if (rIdx < 12) return `Right Hand, Upper Row, Col ${(rIdx - 6) + 1}`;
-            if (rIdx < 18) return `Right Hand, Home Row, Col ${(rIdx - 12) + 1}`;
-            if (rIdx < 24) return `Right Hand, Bottom Row, Col ${(rIdx - 18) + 1}`;
-            return `Right Hand, Thumb Cluster, Key ${(rIdx - 24) + 1}`;
-        }
-    }
-};
-
-const Parser = {
-    prepareCCode: (rawText) => rawText.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*/g, '').replace(/[ \t]+/g, ' ').trim(),
-    
-    splitQmkKeys: (str) => {
-        let keys = [], current = "", depth = 0;
-        for (let i = 0; i < str.length; i++) {
-            if (str[i] === '(') depth++; else if (str[i] === ')') depth--;
-            else if (str[i] === ',' && depth === 0) { keys.push(current.trim()); current = ""; continue; }
-            current += str[i];
-        }
-        if (current.trim()) keys.push(current.trim());
-        return keys;
-    },
-
-    extractLedmap: (text) => {
-        let ledmapStr = text.match(/const\s+uint8_t\s+PROGMEM\s+ledmap\[\]\[RGB_MATRIX_LED_COUNT\]\[3\]\s*=\s*\{([\s\S]*?)\};/);
-        if (!ledmapStr) return {};
-        let layerColors = {};
-        let layerBlocks = ledmapStr[1].split(/\[(\d+)\]\s*=\s*\{/);
-        for (let i = 1; i < layerBlocks.length; i += 2) {
-            let layerIdx = parseInt(layerBlocks[i]);
-            let colorData = layerBlocks[i+1];
-            let colors = [];
-            let colorRegex = /\{\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\}/g;
-            let cMatch;
-            while ((cMatch = colorRegex.exec(colorData)) !== null) {
-                colors.push({ h: parseInt(cMatch[1]), s: parseInt(cMatch[2]), v: parseInt(cMatch[3]) });
-            }
-            layerColors[layerIdx] = colors;
-        }
-        return layerColors;
-    },
-
-    parseOryxCombos: (cCode, layer0Nodes, state) => {
-        const comboDefs = {}; const combos = [];
-        const comboArrayRegex = /const\s+uint16_t\s+(?:PROGMEM\s+)?([a-zA-Z0-9_]+)\[\]\s*=\s*\{([\s\S]*?)\};/g;
-        let cMatch;
-        while ((cMatch = comboArrayRegex.exec(cCode)) !== null) {
-            comboDefs[cMatch[1]] = Parser.splitQmkKeys(cMatch[2]).filter(s => s !== 'COMBO_END' && s.length > 0);
-        }
-
-        const deepEqualAst = (a, b) => {
-            if (a.value !== b.value) return false;
-            if (!a.params && !b.params) return true;
-            if (!a.params || !b.params || a.params.length !== b.params.length) return false;
-            return a.params.every((p, i) => deepEqualAst(p, b.params[i]));
-        };
-
-        const combosBlock = cCode.match(/combo_t\s+[a-zA-Z0-9_]+[^=]*=\s*\{([\s\S]*?)\};/);
-        if (combosBlock) {
-            const comboLineRegex = /COMBO\s*\(\s*([a-zA-Z0-9_]+)\s*,\s*([^)]+)\s*\)/g;
-            let cbMatch;
-            while ((cbMatch = comboLineRegex.exec(combosBlock[1])) !== null) {
-                let comboName = cbMatch[1]; let resultKey = cbMatch[2].trim();
-                if (comboDefs[comboName]) {
-                    let positions = comboDefs[comboName].map(k => {
-                        let zmkTarget = Parser.translateAst(k, state, "Combo", null);
-                        if (zmkTarget?.value === "&none" || zmkTarget?.value === "none") return -1;
-                        let targetKeyVal = (zmkTarget?.params && zmkTarget.params[0]) ? zmkTarget.params[0].value : null;
-                        return layer0Nodes.findIndex(node => {
-                            if (deepEqualAst(node, zmkTarget)) return true;
-                            if (['&mt', '&lt', '&sk'].includes(node?.value) && node?.params) {
-                                if (node.params.length > 1 && targetKeyVal && node.params[1]?.value === targetKeyVal) return true;
-                                if (node.params.length === 1 && targetKeyVal && node.params[0]?.value === targetKeyVal) return true;
-                            }
-                            return false;
-                        });
-                    }).filter(p => p !== -1);
-
-                    let finalBinding = Parser.translateAst(resultKey, state, "Combo", null);
-                    if (positions.length === comboDefs[comboName].length) {
-                        if (finalBinding?.value === "&none" || finalBinding?.value === "none") {
-                            Utils.logConversion(state, `COMBO(${comboName})`, "Dropped", "warning", Utils.getZmkSuggestion(resultKey));
-                        } else {
-                            combos.push({
-                                name: comboName, description: `Migrated combo: ${comboName}`,
-                                binding: finalBinding, keyPositions: positions, timeoutMs: state.config.comboTerm, layers: [0] 
-                            });
-                            Utils.logConversion(state, `COMBO(${comboName})`, `[Pos: ${positions.join(', ')}] -> ${finalBinding.value}`, "combo");
-                        }
-                    } else {
-                        Utils.logConversion(state, `COMBO(${comboName})`, "Dropped", "warning", "Could not map all source keys to the Base Layer matrix.");
-                    }
-                }
-            }
-        }
-        return combos;
-    },
-
-    resolveZmkKeycode: (str, rawToken, state, context) => {
-        if (!str) return "none";
-        let clean = str.replace(/^KC_/, '').replace(/^X_/, '').trim();
-        if (/^[0-9]$/.test(clean)) return `N${clean}`;
-        if (Constants.QMK_TO_ZMK_MAP[clean]) return Constants.QMK_TO_ZMK_MAP[clean];
-        if (/^F[1-9][0-9]?$/.test(clean) || /^[A-Z]$/.test(clean)) return clean;
-        if (clean === "none" || clean === "trans" || clean === 'QK_BOOT' || clean === 'CW_TOGG') return clean;
-        if (clean.startsWith('RGB_')) return clean;
-        if (clean.startsWith('STN_') || clean.startsWith('QK_STENO') || clean.startsWith('DM_') || clean.startsWith('HSV_') || clean === 'LED_LEVEL') {
-            Utils.logConversion(state, rawToken || str, "&none", "warning", Utils.getZmkSuggestion(rawToken || str), context);
-            return "none";
-        }
-        Utils.logConversion(state, rawToken || str, "&none", "warning", Utils.getZmkSuggestion(rawToken || str), context);
-        return "none";
-    },
-
-    parseMacroParam: (str, state, context) => {
-        if (!str) return { value: "none" };
-        str = str.trim();
-        if (state.defines[str] !== undefined) str = state.defines[str];
-        if (Constants.DEALBREAKER_KEYS.some(bad => str.includes(bad))) {
-            Utils.logConversion(state, str, "&none", "warning", Utils.getZmkSuggestion(str), context);
-            return { value: "none" }; 
-        }
-        let wrapMatch = str.match(/^([A-Z0-9_]+)\((.*)\)$/i);
-        if (wrapMatch) {
-            let func = wrapMatch[1].toUpperCase();
-            let modMap = {"LSFT":"LS", "LCTL":"LC", "LALT":"LA", "LGUI":"LG", "LCMD":"LG", "LWIN":"LG", "LOPT":"LA", "RSFT":"RS", "RCTL":"RC", "RALT":"RA", "RGUI":"RG", "RCMD":"RG", "RWIN":"RG", "ROPT":"RA", "S":"LS", "C":"LC", "A":"LA", "G":"LG", "ALGR":"RA"}; 
-            if (modMap[func]) func = modMap[func];
-            let inner = Parser.parseMacroParam(wrapMatch[2], state, context);
-            return inner?.value === "none" ? { value: "none" } : { value: func, params: [inner] };
-        }
-        let resolved = Parser.resolveZmkKeycode(str, str, state, context);
-        if (['MB1', 'MB2', 'MB3', 'MB4', 'MB5', 'MOVE_UP', 'MOVE_DOWN', 'MOVE_LEFT', 'MOVE_RIGHT', 'SCRL_UP', 'SCRL_DOWN', 'SCRL_LEFT', 'SCRL_RIGHT'].includes(resolved)) {
-            Utils.logConversion(state, str, "&none", "warning", Utils.getZmkSuggestion(str), context);
-            return { value: "none" };
-        }
-        return { value: resolved };
-    },
-
-    translateAst: (rawToken, state, layerIdx = null, keyIdx = null) => {
+translateAst: (rawToken, state, layerIdx = null, keyIdx = null) => {
         if (!rawToken) return { value: "&none" };
         let tok = rawToken.trim();
 
@@ -216,6 +26,25 @@ const Parser = {
             let modMap = {"LSFT":"LS", "LCTL":"LC", "LALT":"LA", "LGUI":"LG", "LCMD":"LG", "LWIN":"LG", "LOPT":"LA", "RSFT":"RS", "RCTL":"RC", "RALT":"RA", "RGUI":"RG", "RCMD":"RG", "RWIN":"RG", "ROPT":"RA", "S":"LS", "C":"LC", "A":"LA", "G":"LG", "ALGR":"RA"}; 
             if (modMap[func]) func = modMap[func];
 
+            // Map standard QMK Mod-Tap macros to ZMK Mod-Taps (&mt)
+            const modTapMap = {
+                "LCTL_T": "LCTRL", "CTL_T": "LCTRL", "C_T": "LCTRL",
+                "LSFT_T": "LSHIFT", "SFT_T": "LSHIFT", "S_T": "LSHIFT",
+                "LALT_T": "LALT", "ALT_T": "LALT", "A_T": "LALT", "LOPT_T": "LALT", "OPT_T": "LALT",
+                "LGUI_T": "LGUI", "GUI_T": "LGUI", "CMD_T": "LGUI", "LCMD_T": "LGUI", "WIN_T": "LGUI", "LWIN_T": "LGUI",
+                "RCTL_T": "RCTRL", 
+                "RSFT_T": "RSHIFT", 
+                "RALT_T": "RALT", "ROPT_T": "RALT", "ALGR_T": "RALT",
+                "RGUI_T": "RGUI", "RCMD_T": "RGUI", "RWIN_T": "RGUI"
+            };
+
+            if (modTapMap[func]) {
+                let p0 = Parser.parseMacroParam(innerTokens[0], state, context);
+                if (!p0 || p0.value === "none") return { value: "&none" };
+                Utils.logConversion(state, rawToken, `&mt ${modTapMap[func]} ${p0.value}`, "hold_tap");
+                return { value: "&mt", params: [{ value: modTapMap[func] }, p0] };
+            }
+
             if (func === 'OSM') {
                 let p0 = Parser.parseMacroParam(innerTokens[0], state, context);
                 if (!p0 || p0.value === "none") return { value: "&none" }; 
@@ -229,9 +58,11 @@ const Parser = {
                 Utils.logConversion(state, rawToken, `&mt HYPR/MEH`, "hold_tap");
                 return { value: "&mt", params: [modAST, p0] };
             }
-            if (['MT', 'LT', 'OSL', 'TT', 'TO', 'MO'].includes(func)) {
+            
+            // Note the addition of 'TG' for Toggle Layers
+            if (['MT', 'LT', 'OSL', 'TT', 'TG', 'TO', 'MO'].includes(func)) {
                 let params = [];
-                if (['LT', 'OSL', 'TT', 'TO', 'MO'].includes(func)) {
+                if (['LT', 'OSL', 'TT', 'TG', 'TO', 'MO'].includes(func)) {
                     let p0 = innerTokens[0] ? innerTokens[0].trim() : "0";
                     let layerNum = state.defines[p0] !== undefined ? state.defines[p0] : parseInt(p0);
                     params.push({ value: isNaN(layerNum) ? p0 : layerNum });
@@ -245,7 +76,7 @@ const Parser = {
                     if (!p1 || p1.value === "none") return { value: "&none" }; 
                     params.push(p1);
                 }
-                let zmkFunc = func === 'TT' ? '&tog' : func === 'OSL' ? '&sl' : `&${func.toLowerCase()}`;
+                let zmkFunc = (func === 'TT' || func === 'TG') ? '&tog' : func === 'OSL' ? '&sl' : `&${func.toLowerCase()}`;
                 Utils.logConversion(state, rawToken, zmkFunc, "hold_tap");
                 return { value: zmkFunc, params };
             }
@@ -281,117 +112,4 @@ const Parser = {
 
         Utils.logConversion(state, rawToken, bareResolved, "layer_binding");
         return { value: "&kp", params: [{ value: bareResolved }] };
-    }
-};
-
-self.onmessage = function(e) {
-    const { rawText, title } = e.data;
-    try {
-        if (!rawText) throw new Error("No source code text provided to the parser.");
-
-        const state = { log: { layer_binding: {}, hold_tap: {}, combo: {}, warning: {} }, macros: {}, tapDances: {}, config: { tappingTerm: 200, comboTerm: 50 }, defines: {} };
-        const cleanText = Parser.prepareCCode(rawText);
-
-        const tapMatch = cleanText.match(/#define\s+TAPPING_TERM\s+(\d+)/);
-        if (tapMatch) state.config.tappingTerm = parseInt(tapMatch[1]);
-        const comboMatch = cleanText.match(/#define\s+COMBO_TERM\s+(\d+)/);
-        if (comboMatch) state.config.comboTerm = parseInt(comboMatch[1]);
-        const defRegex = /#define\s+([A-Za-z0-9_]+)\s+([^\n\r]+)/g; let m;
-        while ((m = defRegex.exec(cleanText)) !== null) state.defines[m[1]] = m[2].trim();
-
-        // 🟢 BRUTE FORCE ZSA C-BLOCK EXTRACTOR
-        const extractBraceBlock = (text, startIdx) => {
-            let start = text.indexOf('{', startIdx);
-            if (start === -1) return null;
-            let depth = 0, end = -1;
-            for (let i = start; i < text.length; i++) {
-                if (text[i] === '{') depth++;
-                if (text[i] === '}') depth--;
-                if (depth === 0) { end = i + 1; break; }
-            }
-            if (end !== -1) return text.substring(start, end).trim();
-            return null;
-        };
-
-        // Grab Oryx Custom Tap Dance Functions
-        let tdRegex = /void\s+(dance_[a-zA-Z0-9_]+)_finished\s*\(/gi;
-        let match;
-        while ((match = tdRegex.exec(cleanText)) !== null) {
-            let block = extractBraceBlock(cleanText, match.index);
-            let name = match[1].toUpperCase();
-            if (block) state.tapDances[name] = `void ${match[1]}_finished(...) ${block}`;
-        }
-        
-        let tdResetRegex = /void\s+(dance_[a-zA-Z0-9_]+)_reset\s*\(/gi;
-        while ((match = tdResetRegex.exec(cleanText)) !== null) {
-            let block = extractBraceBlock(cleanText, match.index);
-            let name = match[1].toUpperCase();
-            if (block && state.tapDances[name]) {
-                state.tapDances[name] += `\n\nvoid ${match[1]}_reset(...) ${block}`;
-            }
-        }
-
-        // Grab Standard Macros
-        let macroRegex = /case\s+(ST_MACRO_[a-zA-Z0-9_]+):/g;
-        while ((match = macroRegex.exec(cleanText)) !== null) {
-            let start = match.index;
-            let end = cleanText.indexOf('break;', start);
-            if (end !== -1) {
-                state.macros[match[1]] = cleanText.substring(start, end + 6).trim();
-            }
-        }
-
-        const ledmapColors = Parser.extractLedmap(cleanText);
-
-        let rawLayers = []; let idx = cleanText.indexOf("LAYOUT_voyager");
-        while (idx !== -1) {
-            let start = cleanText.indexOf('(', idx); let end = -1, depth = 0;
-            for (let i = start; i < cleanText.length; i++) {
-                if (cleanText[i] === '(') depth++; if (cleanText[i] === ')') depth--;
-                if (depth === 0) { end = i; break; }
-            }
-            if (end !== -1) { rawLayers.push(cleanText.substring(start + 1, end)); idx = cleanText.indexOf("LAYOUT_voyager", end); }
-            else break;
-        }
-        if (!rawLayers.length) throw new Error("No LAYOUT_voyager blocks found in the C code.");
-
-        const astLayers = rawLayers.map((layerStr, layerIdx) => {
-            const astKeys = Parser.splitQmkKeys(layerStr).map((tok, keyIdx) => Parser.translateAst(tok, state, layerIdx, keyIdx));
-            
-            if (ledmapColors[layerIdx]) {
-                ledmapColors[layerIdx].forEach((colorObj, keyIdx) => {
-                    if (keyIdx < astKeys.length && colorObj.v > 0) {
-                        if (!astKeys[keyIdx]?.decoration) astKeys[keyIdx].decoration = {};
-                        astKeys[keyIdx].decoration.background = Utils.hsvToHex(colorObj.h, colorObj.s, colorObj.v);
-                    }
-                });
-            }
-            
-            let mapped = new Array(Constants.TARGET_KEY_COUNT).fill(null).map(() => ({ value: "&none" }));
-            for (let i = 0; i < 48; i++) { if (astKeys[i]) mapped[i] = astKeys[i]; }
-            if (astKeys[48]) mapped[54] = astKeys[48]; if (astKeys[49]) mapped[55] = astKeys[49];
-            if (astKeys[50]) mapped[58] = astKeys[50]; if (astKeys[51]) mapped[59] = astKeys[51];
-            return mapped;
-        });
-
-        const maxLayerIdx = astLayers.length - 1;
-        astLayers.forEach(layer => layer.forEach(k => {
-            if (["&mo", "&to", "&tog", "&lt", "&sl"].includes(k?.value) && k?.params?.[0] && typeof k.params[0].value === 'number') {
-                if (k.params[0].value > maxLayerIdx) k.params[0].value = maxLayerIdx; 
-            }
-        }));
-
-        const generatedCombos = Parser.parseOryxCombos(cleanText, astLayers[0] || [], state);
-
-        const finalOutput = { 
-            keyboard: Constants.TARGET_BOARD, firmware_api_version: "1", locale: "en-US", uuid: Utils.safeUUID(),
-            title: title, 
-            layer_names: astLayers.map((_, i) => `Layer_${i}`), layers: astLayers,
-            combos: generatedCombos, macros: [], holdTaps: [] 
-        };
-
-        self.postMessage({ success: true, finalOutput, state, layerCount: astLayers.length });
-    } catch (err) {
-        self.postMessage({ success: false, error: err.message, stack: err.stack });
-    }
-};
+    },
