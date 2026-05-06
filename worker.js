@@ -218,9 +218,13 @@ const Parser = {
         str = str.trim();
         if (state.defines[str] !== undefined) str = state.defines[str];
         
-        // 🟢 FORCE EXPANSION OF BARE ALIASES BEFORE REGEX MATCH
-        if (str === 'MOD_HYPR' || str === 'KC_HYPR') str = 'LC(LS(LA(LGUI)))';
-        if (str === 'MOD_MEH' || str === 'KC_MEH') str = 'LC(LS(LALT))';
+        // 🟢 EXPLICIT AST INJECTION FOR HYPR AND MEH MODIFIERS
+        if (str === 'MOD_HYPR' || str === 'KC_HYPR' || str === 'ALL_T') {
+            return { value: "LC", params: [{ value: "LS", params: [{ value: "LA", params: [{ value: "LGUI" }] }] }] };
+        }
+        if (str === 'MOD_MEH' || str === 'KC_MEH' || str === 'MEH_T') {
+            return { value: "LC", params: [{ value: "LS", params: [{ value: "LALT" }] }] };
+        }
         
         if (Constants.DEALBREAKER_KEYS.some(bad => str.includes(bad))) {
             Utils.logConversion(state, str, "&none", "warning", Utils.getZmkSuggestion(str), context);
@@ -247,13 +251,19 @@ const Parser = {
         if (!rawToken) return { value: "&none" };
         let tok = rawToken.trim();
 
-        // 🟢 FORCE EXPANSION OF BARE ALIASES BEFORE REGEX MATCH
-        if (tok === 'MOD_HYPR' || tok === 'KC_HYPR') tok = 'LC(LS(LA(LGUI)))';
-        if (tok === 'MOD_MEH' || tok === 'KC_MEH') tok = 'LC(LS(LALT))';
-
         let configInfo = Parser.getConfigForToken(rawToken, state);
         let positionName = layerIdx === "Combo" ? "Inside Combo" : Utils.getVoyagerPosition(keyIdx);
         const context = { layer: layerIdx, pos: positionName, config: configInfo };
+        
+        // 🟢 EXPLICIT AST INJECTION FOR HYPR AND MEH BINDINGS
+        if (tok === 'MOD_HYPR' || tok === 'KC_HYPR') {
+            Utils.logConversion(state, rawToken, "&kp HYPR", "layer_binding", "", context);
+            return { value: "&kp", params: [{ value: "LC", params: [{ value: "LS", params: [{ value: "LA", params: [{ value: "LGUI" }] }] }] }] };
+        }
+        if (tok === 'MOD_MEH' || tok === 'KC_MEH') {
+            Utils.logConversion(state, rawToken, "&kp MEH", "layer_binding", "", context);
+            return { value: "&kp", params: [{ value: "LC", params: [{ value: "LS", params: [{ value: "LALT" }] }] }] };
+        }
         
         if (Constants.DEALBREAKER_KEYS.some(bad => tok.includes(bad))) {
             Utils.logConversion(state, rawToken, "&none", "warning", Utils.getZmkSuggestion(rawToken), context);
