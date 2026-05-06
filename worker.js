@@ -39,6 +39,23 @@ const Utils = {
         if (tok.includes('LAYER_COLOR') || tok.includes('RGB')) return "Rebuild using ZMK RGB Underglow behaviors (&rgb_ug).";
         if (tok.includes('LCTL(KC_MS') || tok.includes('LSFT(KC_MS')) return "ZMK cannot mix mouse clicks and keyboard modifiers on a single key. Rebuild as a ZMK Macro.";
         return "Requires a custom ZMK Behavior or Macro setup in the Layout Editor.";
+    },
+    getVoyagerPosition: (idx) => {
+        if (idx === null || idx === undefined) return "Unknown";
+        if (idx < 26) { 
+            if (idx < 6) return `Left Hand, Top Row, Col ${idx + 1}`;
+            if (idx < 12) return `Left Hand, Upper Row, Col ${(idx - 6) + 1}`;
+            if (idx < 18) return `Left Hand, Home Row, Col ${(idx - 12) + 1}`;
+            if (idx < 24) return `Left Hand, Bottom Row, Col ${(idx - 18) + 1}`;
+            return `Left Hand, Thumb Cluster, Key ${(idx - 24) + 1}`;
+        } else { 
+            let rIdx = idx - 26;
+            if (rIdx < 6) return `Right Hand, Top Row, Col ${rIdx + 1}`;
+            if (rIdx < 12) return `Right Hand, Upper Row, Col ${(rIdx - 6) + 1}`;
+            if (rIdx < 18) return `Right Hand, Home Row, Col ${(rIdx - 12) + 1}`;
+            if (rIdx < 24) return `Right Hand, Bottom Row, Col ${(rIdx - 18) + 1}`;
+            return `Right Hand, Thumb Cluster, Key ${(rIdx - 24) + 1}`;
+        }
     }
 };
 
@@ -79,7 +96,6 @@ const Parser = {
         const comboDefs = {}; const combos = [];
         const comboArrayRegex = /const\s+uint16_t\s+(?:PROGMEM\s+)?([a-zA-Z0-9_]+)\[\]\s*=\s*\{([\s\S]*?)\};/g;
         let cMatch;
-        
         while ((cMatch = comboArrayRegex.exec(cCode)) !== null) {
             comboDefs[cMatch[1]] = Parser.splitQmkKeys(cMatch[2]).filter(s => s !== 'COMBO_END' && s.length > 0);
         }
@@ -97,13 +113,11 @@ const Parser = {
             let cbMatch;
             while ((cbMatch = comboLineRegex.exec(combosBlock[1])) !== null) {
                 let comboName = cbMatch[1]; let resultKey = cbMatch[2].trim();
-                
                 if (comboDefs[comboName]) {
                     let positions = comboDefs[comboName].map(k => {
                         let zmkTarget = Parser.translateAst(k, state, "Combo", null);
                         if (zmkTarget?.value === "&none" || zmkTarget?.value === "none") return -1;
                         let targetKeyVal = (zmkTarget?.params && zmkTarget.params[0]) ? zmkTarget.params[0].value : null;
-                        
                         return layer0Nodes.findIndex(node => {
                             if (deepEqualAst(node, zmkTarget)) return true;
                             if (['&mt', '&lt', '&sk'].includes(node?.value) && node?.params) {
@@ -115,15 +129,13 @@ const Parser = {
                     }).filter(p => p !== -1);
 
                     let finalBinding = Parser.translateAst(resultKey, state, "Combo", null);
-                    
                     if (positions.length === comboDefs[comboName].length) {
                         if (finalBinding?.value === "&none" || finalBinding?.value === "none") {
                             Utils.logConversion(state, `COMBO(${comboName})`, "Dropped", "warning", Utils.getZmkSuggestion(resultKey));
                         } else {
                             combos.push({
                                 name: comboName, description: `Migrated combo: ${comboName}`,
-                                binding: finalBinding, keyPositions: positions,
-                                timeoutMs: state.config.comboTerm, layers: [0] 
+                                binding: finalBinding, keyPositions: positions, timeoutMs: state.config.comboTerm, layers: [0] 
                             });
                             Utils.logConversion(state, `COMBO(${comboName})`, `[Pos: ${positions.join(', ')}] -> ${finalBinding.value}`, "combo");
                         }
@@ -143,13 +155,11 @@ const Parser = {
         if (Constants.QMK_TO_ZMK_MAP[clean]) return Constants.QMK_TO_ZMK_MAP[clean];
         if (/^F[1-9][0-9]?$/.test(clean) || /^[A-Z]$/.test(clean)) return clean;
         if (clean === "none" || clean === "trans" || clean === 'QK_BOOT' || clean === 'CW_TOGG') return clean;
-        
         if (clean.startsWith('RGB_')) return clean;
         if (clean.startsWith('STN_') || clean.startsWith('QK_STENO') || clean.startsWith('DM_') || clean.startsWith('HSV_') || clean === 'LED_LEVEL') {
             Utils.logConversion(state, rawToken || str, "&none", "warning", Utils.getZmkSuggestion(rawToken || str), context);
             return "none";
         }
-        
         Utils.logConversion(state, rawToken || str, "&none", "warning", Utils.getZmkSuggestion(rawToken || str), context);
         return "none";
     },
@@ -158,12 +168,10 @@ const Parser = {
         if (!str) return { value: "none" };
         str = str.trim();
         if (state.defines[str] !== undefined) str = state.defines[str];
-        
         if (Constants.DEALBREAKER_KEYS.some(bad => str.includes(bad))) {
             Utils.logConversion(state, str, "&none", "warning", Utils.getZmkSuggestion(str), context);
             return { value: "none" }; 
         }
-
         let wrapMatch = str.match(/^([A-Z0-9_]+)\((.*)\)$/i);
         if (wrapMatch) {
             let func = wrapMatch[1].toUpperCase();
@@ -172,7 +180,6 @@ const Parser = {
             let inner = Parser.parseMacroParam(wrapMatch[2], state, context);
             return inner?.value === "none" ? { value: "none" } : { value: func, params: [inner] };
         }
-        
         let resolved = Parser.resolveZmkKeycode(str, str, state, context);
         if (['MB1', 'MB2', 'MB3', 'MB4', 'MB5', 'MOVE_UP', 'MOVE_DOWN', 'MOVE_LEFT', 'MOVE_RIGHT', 'SCRL_UP', 'SCRL_DOWN', 'SCRL_LEFT', 'SCRL_RIGHT'].includes(resolved)) {
             Utils.logConversion(state, str, "&none", "warning", Utils.getZmkSuggestion(str), context);
@@ -185,13 +192,14 @@ const Parser = {
         if (!rawToken) return { value: "&none" };
         let tok = rawToken.trim();
 
-        // CAPTURE RICH CONTEXT (Macros & Tap Dances)
+        // CAPTURE RICH CONTEXT (Macros & ZSA Tap Dances)
         let configInfo = null;
         let cleanTok = tok.replace(/^TD\(/, '').replace(/\)$/, '').trim();
         if (state.tapDances && state.tapDances[cleanTok]) configInfo = state.tapDances[cleanTok];
         else if (state.macros && state.macros[cleanTok]) configInfo = state.macros[cleanTok];
         
-        const context = { layer: layerIdx, key: keyIdx, config: configInfo };
+        let positionName = layerIdx === "Combo" ? "Inside Combo" : Utils.getVoyagerPosition(keyIdx);
+        const context = { layer: layerIdx, pos: positionName, config: configInfo };
         
         if (Constants.DEALBREAKER_KEYS.some(bad => tok.includes(bad))) {
             Utils.logConversion(state, rawToken, "&none", "warning", Utils.getZmkSuggestion(rawToken), context);
@@ -291,7 +299,7 @@ self.onmessage = function(e) {
         const defRegex = /#define\s+([A-Za-z0-9_]+)\s+([^\n\r]+)/g; let m;
         while ((m = defRegex.exec(cleanText)) !== null) state.defines[m[1]] = m[2].trim();
 
-        // 🟢 EXTRACT MACROS AND TAP DANCES DIRECTLY FROM RAW C CODE
+        // 🟢 BRUTE FORCE ZSA C-BLOCK EXTRACTOR
         const extractBraceBlock = (text, startIdx) => {
             let start = text.indexOf('{', startIdx);
             if (start === -1) return null;
@@ -299,38 +307,37 @@ self.onmessage = function(e) {
             for (let i = start; i < text.length; i++) {
                 if (text[i] === '{') depth++;
                 if (text[i] === '}') depth--;
-                if (depth === 0) { end = i; break; }
+                if (depth === 0) { end = i + 1; break; }
             }
-            if (end !== -1) return text.substring(start + 1, end).trim();
+            if (end !== -1) return text.substring(start, end).trim();
             return null;
         };
 
-        // Extract ZSA Custom Tap Dances
-        let tdRegex = /void\s+(dance_[a-zA-Z0-9_]+)_finished/gi;
+        // Grab Oryx Custom Tap Dance Functions
+        let tdRegex = /void\s+(dance_[a-zA-Z0-9_]+)_finished\s*\(/gi;
         let match;
-        while ((match = tdRegex.exec(rawText)) !== null) {
-            let block = extractBraceBlock(rawText, match.index);
-            if (block) state.tapDances[match[1].toUpperCase()] = block;
+        while ((match = tdRegex.exec(cleanText)) !== null) {
+            let block = extractBraceBlock(cleanText, match.index);
+            let name = match[1].toUpperCase();
+            if (block) state.tapDances[name] = `void ${match[1]}_finished(...) ${block}`;
         }
-
-        // Fallback for standard QMK tap dances array
-        const tdBlockMatch = rawText.match(/qk_tap_dance_action_t\s+tap_dance_actions\[\]\s*=\s*\{([\s\S]*?)\};/);
-        if (tdBlockMatch) {
-            const tdMatches = tdBlockMatch[1].matchAll(/\[\s*([a-zA-Z0-9_]+)\s*\]\s*=\s*([^\n\r]+)/g);
-            for (const match of tdMatches) {
-                let val = match[2].trim();
-                if (val.endsWith(',')) val = val.slice(0, -1);
-                if (!state.tapDances[match[1].trim()]) state.tapDances[match[1].trim()] = val;
+        
+        let tdResetRegex = /void\s+(dance_[a-zA-Z0-9_]+)_reset\s*\(/gi;
+        while ((match = tdResetRegex.exec(cleanText)) !== null) {
+            let block = extractBraceBlock(cleanText, match.index);
+            let name = match[1].toUpperCase();
+            if (block && state.tapDances[name]) {
+                state.tapDances[name] += `\n\nvoid ${match[1]}_reset(...) ${block}`;
             }
         }
 
-        // Extract Macros
+        // Grab Standard Macros
         let macroRegex = /case\s+(ST_MACRO_[a-zA-Z0-9_]+):/g;
-        while ((match = macroRegex.exec(rawText)) !== null) {
+        while ((match = macroRegex.exec(cleanText)) !== null) {
             let start = match.index;
-            let end = rawText.indexOf('break;', start);
+            let end = cleanText.indexOf('break;', start);
             if (end !== -1) {
-                state.macros[match[1]] = rawText.substring(start, end + 6).trim();
+                state.macros[match[1]] = cleanText.substring(start, end + 6).trim();
             }
         }
 
@@ -349,7 +356,6 @@ self.onmessage = function(e) {
         if (!rawLayers.length) throw new Error("No LAYOUT_voyager blocks found in the C code.");
 
         const astLayers = rawLayers.map((layerStr, layerIdx) => {
-            // PASS LAYER AND KEY ID INTO PARSER
             const astKeys = Parser.splitQmkKeys(layerStr).map((tok, keyIdx) => Parser.translateAst(tok, state, layerIdx, keyIdx));
             
             if (ledmapColors[layerIdx]) {
