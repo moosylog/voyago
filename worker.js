@@ -234,7 +234,8 @@ const Parser = {
         }
         
         let resolved = Parser.resolveZmkKeycode(str, str, state, context);
-        if (['MB1', 'MB2', 'MB3', 'MB4', 'MB5', 'MOVE_UP', 'MOVE_DOWN', 'MOVE_LEFT', 'MOVE_RIGHT', 'SCRL_UP', 'SCRL_DOWN', 'SCRL_LEFT', 'SCRL_RIGHT'].includes(resolved)) {
+        // 🟢 Using LCLK instead of MB1 here
+        if (['LCLK', 'RCLK', 'MCLK', 'MB4', 'MB5', 'MOVE_UP', 'MOVE_DOWN', 'MOVE_LEFT', 'MOVE_RIGHT', 'SCRL_UP', 'SCRL_DOWN', 'SCRL_LEFT', 'SCRL_RIGHT'].includes(resolved)) {
             Utils.logConversion(state, str, "&none", "warning", Utils.getZmkSuggestion(str), context);
             return { value: "none" };
         }
@@ -250,7 +251,6 @@ const Parser = {
 
         let configInfo = Parser.getConfigForToken(rawToken, state);
         let positionName = layerIdx === "Combo" ? "Inside Combo" : Utils.getVoyagerPosition(keyIdx);
-        // 🟢 Pass the color into the context!
         const context = { layer: layerIdx, pos: positionName, config: configInfo, color: keyColor };
         
         if (Constants.DEALBREAKER_KEYS.some(bad => tok.includes(bad))) {
@@ -353,7 +353,9 @@ const Parser = {
             Utils.logConversion(state, rawToken, `&msc ${bareResolved}`, "layer_binding", "", context); 
             return { value: "&msc", params: [{ value: bareResolved }] }; 
         }
-        if (['MB1', 'MB2', 'MB3', 'MB4', 'MB5'].includes(bareResolved)) { 
+        
+        // 🟢 Using LCLK instead of MB1 here
+        if (['LCLK', 'RCLK', 'MCLK', 'MB4', 'MB5'].includes(bareResolved)) { 
             Utils.logConversion(state, rawToken, `&mkp ${bareResolved}`, "layer_binding", "", context); 
             return { value: "&mkp", params: [{ value: bareResolved }] }; 
         }
@@ -458,7 +460,6 @@ self.onmessage = function(e) {
         const astLayers = rawLayers.map((layerStr, layerIdx) => {
             const tokens = Parser.splitQmkKeys(layerStr);
             const astKeys = tokens.map((tok, keyIdx) => {
-                // 🟢 LOOK UP COLOR BEFORE PARSING SO WE CAN PASS IT DOWN
                 let colorObj = ledmapColors[layerIdx] && ledmapColors[layerIdx][keyIdx];
                 let keyColor = (colorObj && colorObj.v > 0) ? Utils.hsvToHex(colorObj.h, colorObj.s, colorObj.v) : null;
                 
