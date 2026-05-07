@@ -496,7 +496,7 @@ self.onmessage = async function(e) {
 
         const generatedCombos = Parser.parseOryxCombos(cleanText, astLayers[0] || [], state);
 
-        // 🟢 FETCH TEMPLATE AND PROPERLY MERGE THE DATA
+        // 🟢 FETCH TEMPLATE AND PROPERLY MERGE THE DATA (PRESERVING EXTRA TEMPLATE LAYERS/KEYS)
         let templateJson;
         try {
             console.log("Fetching Go60 Template...");
@@ -505,7 +505,7 @@ self.onmessage = async function(e) {
             templateJson = await res.json();
             console.log("Template fetched successfully!");
         } catch (fetchError) {
-            console.error("Failed to fetch Go60 template. Make sure you aren't blocking external requests.", fetchError);
+            console.error("Failed to fetch Go60 template.", fetchError);
             templateJson = {
                 keyboard: Constants.TARGET_BOARD, firmware_api_version: "1", locale: "en-US", 
                 macros: [], holdTaps: [], layers: []
@@ -515,27 +515,41 @@ self.onmessage = async function(e) {
         templateJson.uuid = Utils.safeUUID();
         templateJson.title = title || "Voyago_Export";
         
-        // Safely map Layer Names (Keeping any extras from the template)
-        let mergedLayerNames = [...(templateJson.layer_names || [])];
-        astLayers.forEach((_, i) => { mergedLayerNames[i] = `Layer_${i}`; });
-        templateJson.layer_names = mergedLayerNames;
+        const originalTemplateLayers = templateJson.layers || [];
+        const maxLayerCount = Math.max(astLayers.length, originalTemplateLayers.length);
         
-        // 🟢 DEEP MERGE LAYERS (Overwrites 1-60, Keeps Trackball keys 61+)
-        templateJson.layers = astLayers.map((voyagerLayer, idx) => {
-            let templateLayer = (templateJson.layers && templateJson.layers[idx]) ? templateJson.layers[idx] : [];
-            let newLayer = [...voyagerLayer];
-            if (templateLayer.length > voyagerLayer.length) {
-                newLayer = newLayer.concat(templateLayer.slice(voyagerLayer.length));
+        let mergedLayers = [];
+        let mergedLayerNames = [];
+        
+        for (let i = 0; i < maxLayerCount; i++) {
+            // Keep template layer names if they exist beyond the Voyager layer count
+            if (i < astLayers.length) {
+                mergedLayerNames.push(`Layer_${i}`);
+            } else {
+                mergedLayerNames.push(templateJson.layer_names?.[i] || `Layer_${i}`);
             }
-            return newLayer;
-        });
-        
-        // If the template has extra layers that the Voyager didn't, keep them.
-        if (templateJson.layers && templateJson.layers.length > astLayers.length) {
-            templateJson.layers = templateJson.layers.concat(templateJson.layers.slice(astLayers.length));
+            
+            let vLayer = astLayers[i] || null;
+            let tLayer = originalTemplateLayers[i] || [];
+            
+            if (vLayer) {
+                // Merge Voyager's 60 keys with Template's trackball/extra keys (60+)
+                let combined = [...vLayer];
+                if (tLayer.length > combined.length) {
+                    combined = combined.concat(tLayer.slice(combined.length));
+                }
+                mergedLayers.push(combined);
+            } else {
+                // Keep the extra template layers exactly as they are
+                mergedLayers.push(tLayer);
+            }
         }
-
-        templateJson.combos = generatedCombos;
+        
+        templateJson.layer_names = mergedLayerNames;
+        templateJson.layers = mergedLayers;
+        
+        // Add Voyager combos alongside any default template combos
+        templateJson.combos = (templateJson.combos || []).concat(generatedCombos);
 
         self.postMessage({ success: true, finalOutput: templateJson, state, layerCount: astLayers.length });
     } catch (err) {
