@@ -502,20 +502,16 @@ self.onmessage = async function(e) {
             const targetUrl = 'https://gist.githubusercontent.com/moosylog/a71d65a4b2de4215d7e226449f3cadb2/raw/ee1661e9adbe197285b50ef0bd8997f6a80e795c/Go60_default.json';
             let res = await fetch(targetUrl, { cache: "no-store" });
             
-            // If direct fetch fails (CORS or browser strictness), use a free proxy
             if (!res.ok) {
                 res = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl));
                 if (!res.ok) throw new Error(`Fallback proxy failed with status: ${res.status}`);
             }
-            
             templateJson = await res.json();
             
         } catch (fetchError) {
-            // STOP EXECUTION AND SHOW RED ERROR SCREEN IF TEMPLATE CANNOT LOAD
             throw new Error(`CRITICAL ERROR: Failed to download the Go60 Template. Your browser or network blocked the request. Please temporarily disable Adblockers/Shields for this site and try again. Details: ${fetchError.message}`);
         }
 
-        // PRESERVE ALL TEMPLATE SETTINGS (UUID, Title, Macros, HoldTaps, etc.)
         templateJson.uuid = Utils.safeUUID();
         templateJson.title = title || "Voyago_Export";
         
@@ -525,8 +521,16 @@ self.onmessage = async function(e) {
         let mergedLayers = [];
         let mergedLayerNames = [];
         
+        // The exact hardware mapping array. Keys not in this array belong to the Go60 (Trackball, Encoders, etc)
+        const VOYAGER_MAPPED_INDICES = [
+            0,1,2,3,4,5,6,7,8,9,10,11,
+            12,13,14,15,16,17,18,19,20,21,22,23,
+            24,25,26,27,28,29,30,31,32,33,34,35,
+            36,37,38,39,40,41,42,43,44,45,46,47,
+            54,55,58,59
+        ];
+        
         for (let i = 0; i < maxLayerCount; i++) {
-            // Safe Layer Names
             if (i < astLayers.length) {
                 mergedLayerNames.push(`Layer_${i}`);
             } else {
@@ -537,14 +541,23 @@ self.onmessage = async function(e) {
             let tLayer = originalTemplateLayers[i] || [];
             
             if (vLayer) {
-                // Safely overwrite the first 60 keys, leave trackball keys (61+) untouched
-                let combined = [...vLayer];
-                if (tLayer.length > combined.length) {
-                    combined = combined.concat(tLayer.slice(combined.length));
+                let combined = [];
+                let maxKeyCount = Math.max(vLayer.length, tLayer.length);
+                for (let k = 0; k < maxKeyCount; k++) {
+                    // Overwrite with Voyager keys ONLY in valid Voyager positions
+                    if (VOYAGER_MAPPED_INDICES.includes(k) && k < vLayer.length) {
+                        combined.push(vLayer[k]);
+                    } 
+                    // Preserve the Template's exact keys (Trackball/Encoders) for gaps
+                    else if (k < tLayer.length) {
+                        combined.push(tLayer[k]); 
+                    } 
+                    else {
+                        combined.push({ value: "&none" });
+                    }
                 }
                 mergedLayers.push(combined);
             } else {
-                // Leave template layers fully intact
                 mergedLayers.push(tLayer);
             }
         }
@@ -552,7 +565,6 @@ self.onmessage = async function(e) {
         templateJson.layer_names = mergedLayerNames;
         templateJson.layers = mergedLayers;
         
-        // Append Voyager combos safely to existing Template combos
         templateJson.combos = (templateJson.combos || []).concat(generatedCombos);
 
         self.postMessage({ success: true, finalOutput: templateJson, state, layerCount: astLayers.length });
