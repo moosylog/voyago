@@ -496,22 +496,26 @@ self.onmessage = async function(e) {
 
         const generatedCombos = Parser.parseOryxCombos(cleanText, astLayers[0] || [], state);
 
-        // 🟢 FETCH TEMPLATE AND PROPERLY MERGE THE DATA (PRESERVING EXTRA TEMPLATE LAYERS/KEYS)
+        // 🟢 BULLETPROOF TEMPLATE FETCH & MERGE LOGIC
         let templateJson;
         try {
-            console.log("Fetching Go60 Template...");
-            const res = await fetch('https://gist.githubusercontent.com/moosylog/a71d65a4b2de4215d7e226449f3cadb2/raw/ee1661e9adbe197285b50ef0bd8997f6a80e795c/Go60_default.json');
-            if (!res.ok) throw new Error(`Network response was not ok (${res.status})`);
+            const targetUrl = 'https://gist.githubusercontent.com/moosylog/a71d65a4b2de4215d7e226449f3cadb2/raw/ee1661e9adbe197285b50ef0bd8997f6a80e795c/Go60_default.json';
+            let res = await fetch(targetUrl, { cache: "no-store" });
+            
+            // If direct fetch fails (CORS or browser strictness), use a free proxy
+            if (!res.ok) {
+                res = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl));
+                if (!res.ok) throw new Error(`Fallback proxy failed with status: ${res.status}`);
+            }
+            
             templateJson = await res.json();
-            console.log("Template fetched successfully!");
+            
         } catch (fetchError) {
-            console.error("Failed to fetch Go60 template.", fetchError);
-            templateJson = {
-                keyboard: Constants.TARGET_BOARD, firmware_api_version: "1", locale: "en-US", 
-                macros: [], holdTaps: [], layers: []
-            };
+            // STOP EXECUTION AND SHOW RED ERROR SCREEN IF TEMPLATE CANNOT LOAD
+            throw new Error(`CRITICAL ERROR: Failed to download the Go60 Template. Your browser or network blocked the request. Please temporarily disable Adblockers/Shields for this site and try again. Details: ${fetchError.message}`);
         }
 
+        // PRESERVE ALL TEMPLATE SETTINGS (UUID, Title, Macros, HoldTaps, etc.)
         templateJson.uuid = Utils.safeUUID();
         templateJson.title = title || "Voyago_Export";
         
@@ -522,7 +526,7 @@ self.onmessage = async function(e) {
         let mergedLayerNames = [];
         
         for (let i = 0; i < maxLayerCount; i++) {
-            // Keep template layer names if they exist beyond the Voyager layer count
+            // Safe Layer Names
             if (i < astLayers.length) {
                 mergedLayerNames.push(`Layer_${i}`);
             } else {
@@ -533,14 +537,14 @@ self.onmessage = async function(e) {
             let tLayer = originalTemplateLayers[i] || [];
             
             if (vLayer) {
-                // Merge Voyager's 60 keys with Template's trackball/extra keys (60+)
+                // Safely overwrite the first 60 keys, leave trackball keys (61+) untouched
                 let combined = [...vLayer];
                 if (tLayer.length > combined.length) {
                     combined = combined.concat(tLayer.slice(combined.length));
                 }
                 mergedLayers.push(combined);
             } else {
-                // Keep the extra template layers exactly as they are
+                // Leave template layers fully intact
                 mergedLayers.push(tLayer);
             }
         }
@@ -548,7 +552,7 @@ self.onmessage = async function(e) {
         templateJson.layer_names = mergedLayerNames;
         templateJson.layers = mergedLayers;
         
-        // Add Voyager combos alongside any default template combos
+        // Append Voyager combos safely to existing Template combos
         templateJson.combos = (templateJson.combos || []).concat(generatedCombos);
 
         self.postMessage({ success: true, finalOutput: templateJson, state, layerCount: astLayers.length });
