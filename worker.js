@@ -200,14 +200,11 @@ const Parser = {
         let clean = str.replace(/^KC_/, '').replace(/^X_/, '').trim();
         if (/^[0-9]$/.test(clean)) return `N${clean}`;
         
-        // 🟢 FORCED OVERRIDES: Hard-map MoErgo Mouse Clicks directly in the parser to bypass bad cache
         if (clean === "MS_BTN1" || clean === "LCLK") return "LCLK";
         if (clean === "MS_BTN2" || clean === "RCLK") return "RCLK";
         if (clean === "MS_BTN3" || clean === "MCLK") return "MCLK";
 
         let mapped = Constants.QMK_TO_ZMK_MAP[clean];
-        
-        // Catch cached MB1s and force them to LCLK
         if (mapped === "MB1") return "LCLK";
         if (mapped === "MB2") return "RCLK";
         if (mapped === "MB3") return "MCLK";
@@ -247,8 +244,6 @@ const Parser = {
         }
         
         let resolved = Parser.resolveZmkKeycode(str, str, state, context);
-        
-        // 🟢 BLOCK INVALID ZMK MODIFIER MIXING: You cannot mix modifiers and mouse keys in ZMK. 
         if (['LCLK', 'RCLK', 'MCLK', 'MB4', 'MB5', 'MOVE_UP', 'MOVE_DOWN', 'MOVE_LEFT', 'MOVE_RIGHT', 'SCRL_UP', 'SCRL_DOWN', 'SCRL_LEFT', 'SCRL_RIGHT'].includes(resolved)) {
             Utils.logConversion(state, str, "&none", "warning", Utils.getZmkSuggestion(str), context);
             return { value: "none" };
@@ -368,7 +363,6 @@ const Parser = {
             return { value: "&msc", params: [{ value: bareResolved }] }; 
         }
         
-        // 🟢 CORRECTLY LOGGING AND GENERATING LCLK / RCLK / MCLK
         if (['LCLK', 'RCLK', 'MCLK', 'MB4', 'MB5'].includes(bareResolved)) { 
             Utils.logConversion(state, rawToken, `&mkp ${bareResolved}`, "layer_binding", "", context); 
             return { value: "&mkp", params: [{ value: bareResolved }] }; 
@@ -379,7 +373,8 @@ const Parser = {
     }
 };
 
-self.onmessage = function(e) {
+// 🟢 MAKE WORKER ASYNC TO FETCH GIST TEMPLATE
+self.onmessage = async function(e) {
     const { rawText, title } = e.data;
     try {
         if (!rawText) throw new Error("No source code text provided to the parser.");
@@ -502,14 +497,27 @@ self.onmessage = function(e) {
 
         const generatedCombos = Parser.parseOryxCombos(cleanText, astLayers[0] || [], state);
 
-        const finalOutput = { 
-            keyboard: Constants.TARGET_BOARD, firmware_api_version: "1", locale: "en-US", uuid: Utils.safeUUID(),
-            title: title, 
-            layer_names: astLayers.map((_, i) => `Layer_${i}`), layers: astLayers,
-            combos: generatedCombos, macros: [], holdTaps: [] 
-        };
+        // 🟢 FETCH TEMPLATE AND INJECT DATA
+        let templateJson;
+        try {
+            const res = await fetch('https://gist.githubusercontent.com/moosylog/a71d65a4b2de4215d7e226449f3cadb2/raw/ee1661e9adbe197285b50ef0bd8997f6a80e795c/Go60_default.json');
+            if (!res.ok) throw new Error("Network response was not ok");
+            templateJson = await res.json();
+        } catch (fetchError) {
+            console.warn("Failed to fetch Go60 template. Using fallback.", fetchError);
+            templateJson = {
+                keyboard: Constants.TARGET_BOARD, firmware_api_version: "1", locale: "en-US", 
+                macros: [], holdTaps: []
+            };
+        }
 
-        self.postMessage({ success: true, finalOutput, state, layerCount: astLayers.length });
+        templateJson.uuid = Utils.safeUUID();
+        templateJson.title = title || "Voyago_Export";
+        templateJson.layer_names = astLayers.map((_, i) => `Layer_${i}`);
+        templateJson.layers = astLayers;
+        templateJson.combos = generatedCombos;
+
+        self.postMessage({ success: true, finalOutput: templateJson, state, layerCount: astLayers.length });
     } catch (err) {
         self.postMessage({ success: false, error: err.message, stack: err.stack });
     }
