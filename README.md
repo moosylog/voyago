@@ -36,9 +36,6 @@ VoyaGo does everything locally in your browser for maximum privacy and lightning
 
 ---
 
-## 🔍 Under the Hood: Conversion Matrix
-
-Here is exactly what VoyaGo handles automatically, and what requires a quick manual touch-up in the MoErgo editor.
 
 ## 🔍 Under the Hood: Conversion Matrix
 
