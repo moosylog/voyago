@@ -63,11 +63,11 @@ export const Constants = {
         "LCBR": "LBRC", "RCBR": "RBRC", 
         "LABK": "LT", "RABK": "GT",     
         
-        // --- NATIVE MOUSE KEYS (Now fully mapped!) ---
+        // --- NATIVE MOUSE KEYS (Updated to MoErgo Aliases) ---
         "MS_UP": "MOVE_UP", "MS_DOWN": "MOVE_DOWN", "MS_LEFT": "MOVE_LEFT", "MS_RIGHT": "MOVE_RIGHT", "MS_RGHT": "MOVE_RIGHT",
         "MS_WH_UP": "SCRL_UP", "MS_WH_DOWN": "SCRL_DOWN", "MS_WH_LEFT": "SCRL_LEFT", "MS_WH_RIGHT": "SCRL_RIGHT",
-        "MS_BTN1": "MB1", "MS_BTN2": "MB2", "MS_BTN3": "MB3", "MS_BTN4": "MB4", "MS_BTN5": "MB5",
-        "LCLK": "MB1", "RCLK": "MB2", "MCLK": "MB3",
+        "MS_BTN1": "LCLK", "MS_BTN2": "RCLK", "MS_BTN3": "MCLK", "MS_BTN4": "MB4", "MS_BTN5": "MB5",
+        "LCLK": "LCLK", "RCLK": "RCLK", "MCLK": "MCLK",
         
         "VOLU": "C_VOL_UP", "AUDIO_VOL_UP": "C_VOL_UP",
         "VOLD": "C_VOL_DN", "AUDIO_VOL_DOWN": "C_VOL_DN", "C_VOL_DOWN": "C_VOL_DN",
