@@ -61,8 +61,4 @@ Moving layouts across firmware ecosystems is notoriously difficult. Here is exac
 
 ---
 
-## 💻 Built for Speed
-
-VoyaGo is built with vanilla HTML/JS and Tailwind CSS. It utilizes a dedicated JavaScript Web Worker to chew through massive, thousands-of-lines QMK C-files without freezing your browser. Featuring aggressive cache-busting, dynamic AST JSON generation, and secure fallback proxy-fetching for the MoErgo templates, it guarantees a seamless upgrade path.
-
-**Stop re-typing layouts. Start typing.**
+<sup> AI generated</sup>
