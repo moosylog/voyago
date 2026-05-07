@@ -5,7 +5,7 @@ export const Constants = {
         'ST_MACRO_', 'QK_LLCK', 'TOGGLE_LAYER_COLOR', 'MAC_MISSION_CONTROL', 
         'MAC_LOCK', 'MS_JIGGLER_TOGGLE', 'NAVIGATOR_TURBO', 'NAVIGATOR_AIM', 
         'NAVIGATOR_INC_CPI', 'NAVIGATOR_DEC_CPI', 'DRAG_SCROLL', 'AUTOMOUSE_TOGGLE', 
-        'SNIPING_MODE', 'TD(', 'DANCE_'
+        'SNIPING_MODE', 'TD(', 'DANCE_', 'MAC_SIRI', 'MS_DBL_CLICK', 'TOGGLE_SCROLL'
     ],
     VALID_ZMK_RGB: ['RGB_TOG', 'RGB_EFF', 'RGB_EFR', 'RGB_HUI', 'RGB_HUD', 'RGB_SAI', 'RGB_SAD', 'RGB_BRI', 'RGB_BRD', 'RGB_SPI', 'RGB_SPD', 'RGB_COLOR_HSB'],
     RGB_MAP: { "RGB_VAI": "RGB_BRI", "RGB_VAD": "RGB_BRD", "RGB_MODE_FORWARD": "RGB_EFF", "RGB_MODE_REVERSE": "RGB_EFR", "RGB_MOD": "RGB_EFF", "RGB_RMOD": "RGB_EFR" },
@@ -62,6 +62,12 @@ export const Constants = {
         "LBRC": "LBKT", "RBRC": "RBKT", 
         "LCBR": "LBRC", "RCBR": "RBRC", 
         "LABK": "LT", "RABK": "GT",     
+        
+        // --- NATIVE MOUSE KEYS (Now fully mapped!) ---
+        "MS_UP": "MOVE_UP", "MS_DOWN": "MOVE_DOWN", "MS_LEFT": "MOVE_LEFT", "MS_RIGHT": "MOVE_RIGHT", "MS_RGHT": "MOVE_RIGHT",
+        "MS_WH_UP": "SCRL_UP", "MS_WH_DOWN": "SCRL_DOWN", "MS_WH_LEFT": "SCRL_LEFT", "MS_WH_RIGHT": "SCRL_RIGHT",
+        "MS_BTN1": "MB1", "MS_BTN2": "MB2", "MS_BTN3": "MB3", "MS_BTN4": "MB4", "MS_BTN5": "MB5",
+        "LCLK": "MB1", "RCLK": "MB2", "MCLK": "MB3",
         
         "VOLU": "C_VOL_UP", "AUDIO_VOL_UP": "C_VOL_UP",
         "VOLD": "C_VOL_DN", "AUDIO_VOL_DOWN": "C_VOL_DN", "C_VOL_DOWN": "C_VOL_DN",
