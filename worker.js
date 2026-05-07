@@ -465,7 +465,10 @@ self.onmessage = async function(e) {
         }
         if (!rawLayers.length) throw new Error("No LAYOUT_voyager blocks found in the C code.");
 
-        const astLayers = rawLayers.map((layerStr, layerIdx) => {
+        const maxLayerIdx = rawLayers.length - 1;
+
+        // 🟢 STRICT 60-KEY PADDING ALGORITHM
+        let astLayers = rawLayers.map((layerStr, layerIdx) => {
             const tokens = Parser.splitQmkKeys(layerStr);
             const astKeys = tokens.map((tok, keyIdx) => {
                 let colorObj = ledmapColors[layerIdx] && ledmapColors[layerIdx][keyIdx];
@@ -480,12 +483,13 @@ self.onmessage = async function(e) {
                 return astKey;
             });
             
-            // 🟢 PADDING FIX: Ensure every layer array is exactly 60 keys long!
-            // We use `&trans` for empty keys so the Go60 trackball config shines through
+            // STRICTLY generate an array of length 60, filled with transparent keys
             let mapped = new Array(60).fill(null).map(() => ({ value: "&trans" }));
+            
+            // Apply voyager alphas (indices 0-47)
             for (let i = 0; i < 48; i++) { if (astKeys[i]) mapped[i] = astKeys[i]; }
             
-            // Map Voyager thumb keys to Go60 thumb positions
+            // Map Voyager Thumb clusters (indices 48-51) onto Go60 Thumb clusters
             if (astKeys[48]) mapped[54] = astKeys[48]; 
             if (astKeys[49]) mapped[55] = astKeys[49];
             if (astKeys[50]) mapped[58] = astKeys[50]; 
@@ -496,38 +500,47 @@ self.onmessage = async function(e) {
 
         const generatedCombos = Parser.parseOryxCombos(cleanText, astLayers[0] || [], state);
 
-        // 🟢 FETCH THE GO60 TEMPLATE
+        // 🟢 BULLETPROOF FETCH WITHOUT HEADERS TO AVOID CORS PREFLIGHT
         let templateJson;
         try {
             const targetUrl = 'https://gist.githubusercontent.com/moosylog/a71d65a4b2de4215d7e226449f3cadb2/raw/ee1661e9adbe197285b50ef0bd8997f6a80e795c/Go60_default.json';
-            let res = await fetch(targetUrl, { cache: "no-store", headers: { 'Cache-Control': 'no-cache' } });
-            
-            if (!res.ok) {
-                res = await fetch('https://corsproxy.io/?' + encodeURIComponent(targetUrl));
-                if (!res.ok) throw new Error(`Fallback proxy failed with status: ${res.status}`);
-            }
+            // Use ?t= param to completely bypass local browser cache without setting Headers
+            let res = await fetch(`${targetUrl}?t=${Date.now()}`);
+            if (!res.ok) throw new Error(`Fetch failed with status: ${res.status}`);
             templateJson = await res.json();
             
         } catch (fetchError) {
-            throw new Error(`CRITICAL ERROR: Failed to download the Go60 Template. Your browser or network blocked the request. Please temporarily disable Adblockers/Shields for this site and try again. Details: ${fetchError.message}`);
+            throw new Error(`CRITICAL ERROR: Failed to download the Go60 Template. Your browser blocked the secure connection. Please disable adblockers/VPN shields for this site and do a hard refresh. Details: ${fetchError.message}`);
         }
 
         // 🟢 SHIFT LAYER INDICES
-        // Because we append Voyager layers to the END of the template, we must shift the indices.
         const tOffset = (templateJson.layers && templateJson.layers.length > 0) ? templateJson.layers.length : 0;
 
+        // Shift layers in AST Arrays
         astLayers.forEach(layer => layer.forEach(k => {
-            if (["&mo", "&to", "&tog", "&lt", "&sl"].includes(k?.value) && k?.params?.[0]) {
+            if (["&mo", "&to", "&tog", "&lt", "&sl", "&layer"].includes(k?.value) && k?.params?.[0]) {
                 let val = parseInt(k.params[0].value);
                 if (!isNaN(val)) {
-                    k.params[0].value = val + tOffset;
+                    if (val > maxLayerIdx) val = maxLayerIdx; // Cap to Voyager's max layer bounds
+                    k.params[0].value = val + tOffset;        // Add template offset
                 }
             }
         }));
 
+        // Shift layers in Combos
         generatedCombos.forEach(combo => {
             if (combo.layers) {
-                combo.layers = combo.layers.map(l => l + tOffset);
+                combo.layers = combo.layers.map(l => {
+                    let val = l > maxLayerIdx ? maxLayerIdx : l;
+                    return val + tOffset;
+                });
+            }
+            if (combo.binding && ["&mo", "&to", "&tog", "&lt", "&sl", "&layer"].includes(combo.binding.value) && combo.binding.params?.[0]) {
+                let val = parseInt(combo.binding.params[0].value);
+                if (!isNaN(val)) {
+                    if (val > maxLayerIdx) val = maxLayerIdx;
+                    combo.binding.params[0].value = val + tOffset;
+                }
             }
         });
 
@@ -535,6 +548,7 @@ self.onmessage = async function(e) {
         templateJson.uuid = Utils.safeUUID();
         templateJson.title = title ? `${title}_Appended` : "Voyago_Export_Appended";
         
+        // Concat the strict 60-key arrays
         templateJson.layers = (templateJson.layers || []).concat(astLayers);
         templateJson.layer_names = (templateJson.layer_names || []).concat(astLayers.map((_, i) => `Voyager_${i}`));
         templateJson.combos = (templateJson.combos || []).concat(generatedCombos);
