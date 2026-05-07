@@ -57,7 +57,8 @@ export const UI = {
     },
 
     printPDF: () => {
-        const details = document.querySelectorAll('details, .print-expand-item');
+        // Only open details tags that are NOT hidden from the printer
+        const details = document.querySelectorAll('details:not(.no-print), .print-expand-item:not(.no-print)');
         const state = [];
         details.forEach(d => {
             state.push({ el: d, wasOpen: d.hasAttribute('open') });
@@ -102,7 +103,6 @@ export const UI = {
                 let contextHtml = '';
                 if (data.contexts && data.contexts.length > 0) {
                     
-                    // 🟢 DEDUPLICATE AND RENDER COLOR DOTS
                     let occurrencesMap = new Map();
                     data.contexts.forEach(c => {
                         if (!c) return;
@@ -164,7 +164,7 @@ export const UI = {
             : Object.entries(state.macros).map(([macName, payload]) => `<tr><td class="code"><span class="keycap">${MainUtils.escapeHTML(macName)}</span></td><td class="payload"><pre class="bg-transparent p-0 m-0 text-inherit font-inherit whitespace-pre-wrap">${MainUtils.escapeHTML(payload)}</pre></td><td class="reason">Rebuild as a Custom ZMK Macro.</td></tr>`).join('');
 
         reportContainer.innerHTML = `
-            <div class="checklist-container">
+            <div class="checklist-container no-print">
                 <div class="p-6 bg-slate-50/80 border-b border-slate-100 flex items-center justify-between no-print">
                     <h3 class="text-base font-bold text-slate-800">Your Setup Checklist</h3>
                     <span class="text-xs font-semibold text-slate-400 uppercase tracking-widest">${totalNeedsRebuild > 0 ? '4' : '3'} Steps</span>
@@ -203,7 +203,7 @@ export const UI = {
                 </div>
             </div>
 
-            <div class="mt-12">
+            <div class="mt-12 print-mt-0">
                 <div class="flex items-center gap-4 mb-6 no-print">
                     <div class="h-px bg-slate-200 flex-grow"></div>
                     <h4 class="eyebrow text-slate-400">Advanced Migration Details</h4>
@@ -234,7 +234,7 @@ export const UI = {
                     <div class="cat-content"><table><tr><th>Key ID</th><th>Text to Type</th><th>Action Required</th></tr>${macroRows}</table></div>
                 </details>
                 
-                <details class="report-category">
+                <details class="report-category no-print">
                     <summary>
                         <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
                         Standard Keys (Automatically Mapped) <span class="ml-2 bg-slate-100 text-slate-500 border border-slate-200 px-2 py-0.5 rounded-md text-[10px] font-bold">${stdInstances}</span>
@@ -242,7 +242,7 @@ export const UI = {
                     <div class="cat-content"><table><tr><th>Voyager Key</th><th>Go60 Target</th><th>Status</th><th class="text-center">Instances</th></tr>${buildRows(state.log.layer_binding)}</table></div>
                 </details>
                 
-                <details class="report-category">
+                <details class="report-category no-print">
                     <summary>
                         <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
                         Hold-Taps / Dual-Function <span class="ml-2 bg-slate-100 text-slate-500 border border-slate-200 px-2 py-0.5 rounded-md text-[10px] font-bold">${htInstances}</span>
@@ -250,7 +250,7 @@ export const UI = {
                     <div class="cat-content"><table><tr><th>Voyager Key</th><th>Go60 Target</th><th>Status</th><th class="text-center">Instances</th></tr>${buildRows(state.log.hold_tap)}</table></div>
                 </details>
                 
-                <details class="report-category">
+                <details class="report-category no-print">
                     <summary>
                         <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
                         Auto-Generated Combos <span class="ml-2 bg-slate-100 text-slate-500 border border-slate-200 px-2 py-0.5 rounded-md text-[10px] font-bold">${comboInstances}</span>
