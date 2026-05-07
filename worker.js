@@ -310,7 +310,6 @@ const Parser = {
             }
             if (['MT', 'LT', 'OSL', 'TT', 'TG', 'TO', 'MO'].includes(func)) {
                 let params = [];
-                // WE LEAVE THE RAW INTEGER VALUE HERE. IT WILL BE SHIFTED LATER IN THE MERGE STEP.
                 if (['LT', 'OSL', 'TT', 'TG', 'TO', 'MO'].includes(func)) {
                     let p0 = innerTokens[0] ? innerTokens[0].trim() : "0";
                     let layerNum = state.defines[p0] !== undefined ? state.defines[p0] : parseInt(p0);
@@ -480,16 +479,28 @@ self.onmessage = async function(e) {
                 }
                 return astKey;
             });
-            return astKeys;
+            
+            // 🟢 PADDING FIX: Ensure every layer array is exactly 60 keys long!
+            // We use `&trans` for empty keys so the Go60 trackball config shines through
+            let mapped = new Array(60).fill(null).map(() => ({ value: "&trans" }));
+            for (let i = 0; i < 48; i++) { if (astKeys[i]) mapped[i] = astKeys[i]; }
+            
+            // Map Voyager thumb keys to Go60 thumb positions
+            if (astKeys[48]) mapped[54] = astKeys[48]; 
+            if (astKeys[49]) mapped[55] = astKeys[49];
+            if (astKeys[50]) mapped[58] = astKeys[50]; 
+            if (astKeys[51]) mapped[59] = astKeys[51];
+            
+            return mapped;
         });
 
         const generatedCombos = Parser.parseOryxCombos(cleanText, astLayers[0] || [], state);
 
-        // 🟢 1. FETCH THE TEMPLATE
+        // 🟢 FETCH THE GO60 TEMPLATE
         let templateJson;
         try {
             const targetUrl = 'https://gist.githubusercontent.com/moosylog/a71d65a4b2de4215d7e226449f3cadb2/raw/ee1661e9adbe197285b50ef0bd8997f6a80e795c/Go60_default.json';
-            let res = await fetch(targetUrl, { cache: "no-store" });
+            let res = await fetch(targetUrl, { cache: "no-store", headers: { 'Cache-Control': 'no-cache' } });
             
             if (!res.ok) {
                 res = await fetch('https://corsproxy.io/?' + encodeURIComponent(targetUrl));
@@ -501,11 +512,10 @@ self.onmessage = async function(e) {
             throw new Error(`CRITICAL ERROR: Failed to download the Go60 Template. Your browser or network blocked the request. Please temporarily disable Adblockers/Shields for this site and try again. Details: ${fetchError.message}`);
         }
 
-        // 🟢 2. CALCULATE LAYER SHIFT OFFSET
-        // Since we are APPENDING Voyager to the Go60 template, we must shift all Layer references
+        // 🟢 SHIFT LAYER INDICES
+        // Because we append Voyager layers to the END of the template, we must shift the indices.
         const tOffset = (templateJson.layers && templateJson.layers.length > 0) ? templateJson.layers.length : 0;
 
-        // Shift Layer References in the Voyager AST (`&mo 1` -> `&mo 5`)
         astLayers.forEach(layer => layer.forEach(k => {
             if (["&mo", "&to", "&tog", "&lt", "&sl"].includes(k?.value) && k?.params?.[0]) {
                 let val = parseInt(k.params[0].value);
@@ -515,53 +525,18 @@ self.onmessage = async function(e) {
             }
         }));
 
-        // Shift Layer References in Voyager Combos
         generatedCombos.forEach(combo => {
             if (combo.layers) {
                 combo.layers = combo.layers.map(l => l + tOffset);
             }
         });
 
-        // 🟢 3. MERGE THE VOYAGER LAYERS ONTO THE TEMPLATE TRACKBALL KEYS
-        const VOYAGER_MAPPED_INDICES = [
-            0,1,2,3,4,5,6,7,8,9,10,11,
-            12,13,14,15,16,17,18,19,20,21,22,23,
-            24,25,26,27,28,29,30,31,32,33,34,35,
-            36,37,38,39,40,41,42,43,44,45,46,47,
-            54,55,58,59
-        ];
-        
-        let baseTemplateLayer = (templateJson.layers && templateJson.layers.length > 0) ? templateJson.layers[0] : [];
-
-        let newLayers = astLayers.map((vLayer) => {
-            let combined = [];
-            let maxKeyCount = Math.max(vLayer.length, baseTemplateLayer.length, 66); // Ensure it hits the full Go60 length
-            
-            for (let k = 0; k < maxKeyCount; k++) {
-                if (VOYAGER_MAPPED_INDICES.includes(k) && k < vLayer.length) {
-                    // Place the converted Voyager key here
-                    combined.push(vLayer[k]);
-                } else if (k < baseTemplateLayer.length) {
-                    // Pull the trackball/encoder keys from the template's Base Layer
-                    combined.push(baseTemplateLayer[k]);
-                } else {
-                    combined.push({ value: "&none" });
-                }
-            }
-            return combined;
-        });
-
-        // 🟢 4. APPEND TO THE TEMPLATE
+        // 🟢 APPEND VOYAGER TO TEMPLATE
         templateJson.uuid = Utils.safeUUID();
-        templateJson.title = title ? `${title}_Appended` : "Voyago_Export";
+        templateJson.title = title ? `${title}_Appended` : "Voyago_Export_Appended";
         
-        // Append Layers
-        templateJson.layers = (templateJson.layers || []).concat(newLayers);
-        
-        // Append Layer Names
+        templateJson.layers = (templateJson.layers || []).concat(astLayers);
         templateJson.layer_names = (templateJson.layer_names || []).concat(astLayers.map((_, i) => `Voyager_${i}`));
-        
-        // Append Combos
         templateJson.combos = (templateJson.combos || []).concat(generatedCombos);
 
         self.postMessage({ success: true, finalOutput: templateJson, state, layerCount: astLayers.length });
