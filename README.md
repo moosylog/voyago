@@ -1,5 +1,5 @@
 <sup> AI generated</sup>
-<div align="center">
+
   
 # 🚀 VoyaGo
 
