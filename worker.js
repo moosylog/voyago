@@ -97,9 +97,7 @@ const Parser = {
         let extractKeys = (str) => {
             let res = [str];
             let match = str.match(/^[A-Z0-9_]+\((.*)\)$/i);
-            if (match) {
-                res.push(...Parser.splitQmkKeys(match[1]));
-            }
+            if (match) res.push(...Parser.splitQmkKeys(match[1]));
             return res.map(s => s.trim());
         };
         
@@ -161,7 +159,7 @@ const Parser = {
                         
                         if (comboDefs[comboName]) {
                             let positions = comboDefs[comboName].map(k => {
-                                let zmkTarget = Parser.translateAst(k, state, "Combo", null);
+                                let zmkTarget = Parser.translateAst(k, state, "Combo", null, null);
                                 if (zmkTarget?.value === "&none" || zmkTarget?.value === "none") return -1;
                                 let targetKeyVal = (zmkTarget?.params && zmkTarget.params[0]) ? zmkTarget.params[0].value : null;
                                 return layer0Nodes.findIndex(node => {
@@ -174,7 +172,7 @@ const Parser = {
                                 });
                             }).filter(p => p !== -1);
 
-                            let finalBinding = Parser.translateAst(resultKey, state, "Combo", null);
+                            let finalBinding = Parser.translateAst(resultKey, state, "Combo", null, null);
                             if (positions.length === comboDefs[comboName].length) {
                                 if (finalBinding?.value === "&none" || finalBinding?.value === "none") {
                                     Utils.logConversion(state, `COMBO(${comboName})`, "Dropped", "warning", Utils.getZmkSuggestion(resultKey));
@@ -218,7 +216,6 @@ const Parser = {
         str = str.trim();
         if (state.defines[str] !== undefined) str = state.defines[str];
 
-        // 🟢 BARE MODIFIER AST EXPANSION 
         if (str === 'MOD_HYPR' || str === 'KC_HYPR' || str === 'HYPR') str = 'LS(LC(LA(LGUI)))';
         if (str === 'MOD_MEH' || str === 'KC_MEH' || str === 'MEH') str = 'LS(LC(LALT))';
         
@@ -237,20 +234,24 @@ const Parser = {
         }
         
         let resolved = Parser.resolveZmkKeycode(str, str, state, context);
+        if (['MB1', 'MB2', 'MB3', 'MB4', 'MB5', 'MOVE_UP', 'MOVE_DOWN', 'MOVE_LEFT', 'MOVE_RIGHT', 'SCRL_UP', 'SCRL_DOWN', 'SCRL_LEFT', 'SCRL_RIGHT'].includes(resolved)) {
+            Utils.logConversion(state, str, "&none", "warning", Utils.getZmkSuggestion(str), context);
+            return { value: "none" };
+        }
         return { value: resolved };
     },
 
-    translateAst: (rawToken, state, layerIdx = null, keyIdx = null) => {
+    translateAst: (rawToken, state, layerIdx = null, keyIdx = null, keyColor = null) => {
         if (!rawToken) return { value: "&none" };
         let tok = rawToken.trim();
 
-        // 🟢 BARE MODIFIER AST EXPANSION
         if (tok === 'MOD_HYPR' || tok === 'KC_HYPR' || tok === 'HYPR') tok = 'LS(LC(LA(LGUI)))';
         if (tok === 'MOD_MEH' || tok === 'KC_MEH' || tok === 'MEH') tok = 'LS(LC(LALT))';
 
         let configInfo = Parser.getConfigForToken(rawToken, state);
         let positionName = layerIdx === "Combo" ? "Inside Combo" : Utils.getVoyagerPosition(keyIdx);
-        const context = { layer: layerIdx, pos: positionName, config: configInfo };
+        // 🟢 Pass the color into the context!
+        const context = { layer: layerIdx, pos: positionName, config: configInfo, color: keyColor };
         
         if (Constants.DEALBREAKER_KEYS.some(bad => tok.includes(bad))) {
             Utils.logConversion(state, rawToken, "&none", "warning", Utils.getZmkSuggestion(rawToken), context);
@@ -344,7 +345,6 @@ const Parser = {
             return { value: "&none" };
         }
         
-        // 🟢 BEAUTIFUL NATIVE MOUSE LOGGING
         if (bareResolved.startsWith('MOVE_')) { 
             Utils.logConversion(state, rawToken, `&mmv ${bareResolved}`, "layer_binding", "", context); 
             return { value: "&mmv", params: [{ value: bareResolved }] }; 
@@ -456,16 +456,20 @@ self.onmessage = function(e) {
         if (!rawLayers.length) throw new Error("No LAYOUT_voyager blocks found in the C code.");
 
         const astLayers = rawLayers.map((layerStr, layerIdx) => {
-            const astKeys = Parser.splitQmkKeys(layerStr).map((tok, keyIdx) => Parser.translateAst(tok, state, layerIdx, keyIdx));
-            
-            if (ledmapColors[layerIdx]) {
-                ledmapColors[layerIdx].forEach((colorObj, keyIdx) => {
-                    if (keyIdx < astKeys.length && colorObj.v > 0) {
-                        if (!astKeys[keyIdx]?.decoration) astKeys[keyIdx].decoration = {};
-                        astKeys[keyIdx].decoration.background = Utils.hsvToHex(colorObj.h, colorObj.s, colorObj.v);
-                    }
-                });
-            }
+            const tokens = Parser.splitQmkKeys(layerStr);
+            const astKeys = tokens.map((tok, keyIdx) => {
+                // 🟢 LOOK UP COLOR BEFORE PARSING SO WE CAN PASS IT DOWN
+                let colorObj = ledmapColors[layerIdx] && ledmapColors[layerIdx][keyIdx];
+                let keyColor = (colorObj && colorObj.v > 0) ? Utils.hsvToHex(colorObj.h, colorObj.s, colorObj.v) : null;
+                
+                let astKey = Parser.translateAst(tok, state, layerIdx, keyIdx, keyColor);
+                
+                if (keyColor) {
+                    if (!astKey.decoration) astKey.decoration = {};
+                    astKey.decoration.background = keyColor;
+                }
+                return astKey;
+            });
             
             let mapped = new Array(Constants.TARGET_KEY_COUNT).fill(null).map(() => ({ value: "&none" }));
             for (let i = 0; i < 48; i++) { if (astKeys[i]) mapped[i] = astKeys[i]; }
