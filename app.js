@@ -14,7 +14,7 @@ export const App = {
         }
 
         // Initialize Web Worker using ES Modules
-        App.worker = new Worker('./worker.js', { type: 'module' });
+        App.worker = new Worker('worker.js?v=' + Date.now(), { type: 'module' });
         App.worker.onmessage = App.handleWorkerResponse;
 
         const dz = document.getElementById('dropZone');
