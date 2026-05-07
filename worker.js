@@ -373,7 +373,6 @@ const Parser = {
     }
 };
 
-// 🟢 MAKE WORKER ASYNC TO FETCH GIST TEMPLATE
 self.onmessage = async function(e) {
     const { rawText, title } = e.data;
     try {
@@ -497,24 +496,45 @@ self.onmessage = async function(e) {
 
         const generatedCombos = Parser.parseOryxCombos(cleanText, astLayers[0] || [], state);
 
-        // 🟢 FETCH TEMPLATE AND INJECT DATA
+        // 🟢 FETCH TEMPLATE AND PROPERLY MERGE THE DATA
         let templateJson;
         try {
+            console.log("Fetching Go60 Template...");
             const res = await fetch('https://gist.githubusercontent.com/moosylog/a71d65a4b2de4215d7e226449f3cadb2/raw/ee1661e9adbe197285b50ef0bd8997f6a80e795c/Go60_default.json');
-            if (!res.ok) throw new Error("Network response was not ok");
+            if (!res.ok) throw new Error(`Network response was not ok (${res.status})`);
             templateJson = await res.json();
+            console.log("Template fetched successfully!");
         } catch (fetchError) {
-            console.warn("Failed to fetch Go60 template. Using fallback.", fetchError);
+            console.error("Failed to fetch Go60 template. Make sure you aren't blocking external requests.", fetchError);
             templateJson = {
                 keyboard: Constants.TARGET_BOARD, firmware_api_version: "1", locale: "en-US", 
-                macros: [], holdTaps: []
+                macros: [], holdTaps: [], layers: []
             };
         }
 
         templateJson.uuid = Utils.safeUUID();
         templateJson.title = title || "Voyago_Export";
-        templateJson.layer_names = astLayers.map((_, i) => `Layer_${i}`);
-        templateJson.layers = astLayers;
+        
+        // Safely map Layer Names (Keeping any extras from the template)
+        let mergedLayerNames = [...(templateJson.layer_names || [])];
+        astLayers.forEach((_, i) => { mergedLayerNames[i] = `Layer_${i}`; });
+        templateJson.layer_names = mergedLayerNames;
+        
+        // 🟢 DEEP MERGE LAYERS (Overwrites 1-60, Keeps Trackball keys 61+)
+        templateJson.layers = astLayers.map((voyagerLayer, idx) => {
+            let templateLayer = (templateJson.layers && templateJson.layers[idx]) ? templateJson.layers[idx] : [];
+            let newLayer = [...voyagerLayer];
+            if (templateLayer.length > voyagerLayer.length) {
+                newLayer = newLayer.concat(templateLayer.slice(voyagerLayer.length));
+            }
+            return newLayer;
+        });
+        
+        // If the template has extra layers that the Voyager didn't, keep them.
+        if (templateJson.layers && templateJson.layers.length > astLayers.length) {
+            templateJson.layers = templateJson.layers.concat(templateJson.layers.slice(astLayers.length));
+        }
+
         templateJson.combos = generatedCombos;
 
         self.postMessage({ success: true, finalOutput: templateJson, state, layerCount: astLayers.length });
