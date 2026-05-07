@@ -35,8 +35,8 @@ const Utils = {
         if (tok.includes('TD(') || tok.includes('DANCE_')) return "Rebuild using ZMK Tap-Dance (&td) or Mod-Morph (&morph) inside the Layout Editor.";
         if (tok.includes('QK_LLCK')) return "Rebuild using ZMK Sticky Layer (&sl) or Toggle Layer (&tog) in the Layout Editor.";
         if (tok.includes('MAC_') || tok.includes('PC_')) return "Recreate as a custom ZMK Macro (&macro).";
-        if (tok.includes('NAVIGATOR') || tok.includes('MS_JIGGLER') || tok.includes('SCROLL')) return "Mouse feature. Requires native ZMK Mouse Keys bindings in the Layout Editor.";
-        if (tok.includes('LAYER_COLOR') || tok.includes('RGB')) return "Rebuild using ZMK RGB Underglow behaviors (&rgb_ug).";
+        if (tok.includes('NAVIGATOR') || tok.includes('MS_JIGGLER') || tok.includes('SCROLL') || tok.includes('MS_DBL_CLICK')) return "Mouse feature. Requires native ZMK Mouse Keys bindings in the Layout Editor.";
+        if (tok.includes('LAYER_COLOR') || tok.includes('RGB') || tok.includes('HSV_')) return "Rebuild using ZMK RGB Underglow behaviors (&rgb_ug).";
         if (tok.includes('LCTL(KC_MS') || tok.includes('LSFT(KC_MS')) return "ZMK cannot mix mouse clicks and keyboard modifiers on a single key. Rebuild as a ZMK Macro.";
         return "Requires a custom ZMK Behavior or Macro setup in the Layout Editor.";
     },
@@ -218,7 +218,7 @@ const Parser = {
         str = str.trim();
         if (state.defines[str] !== undefined) str = state.defines[str];
 
-        // 🟢 INTERCEPT AND EXPAND BARE MODIFIERS BEFORE THE REGEX
+        // 🟢 BARE MODIFIER AST EXPANSION 
         if (str === 'MOD_HYPR' || str === 'KC_HYPR' || str === 'HYPR') str = 'LS(LC(LA(LGUI)))';
         if (str === 'MOD_MEH' || str === 'KC_MEH' || str === 'MEH') str = 'LS(LC(LALT))';
         
@@ -237,10 +237,6 @@ const Parser = {
         }
         
         let resolved = Parser.resolveZmkKeycode(str, str, state, context);
-        if (['MB1', 'MB2', 'MB3', 'MB4', 'MB5', 'MOVE_UP', 'MOVE_DOWN', 'MOVE_LEFT', 'MOVE_RIGHT', 'SCRL_UP', 'SCRL_DOWN', 'SCRL_LEFT', 'SCRL_RIGHT'].includes(resolved)) {
-            Utils.logConversion(state, str, "&none", "warning", Utils.getZmkSuggestion(str), context);
-            return { value: "none" };
-        }
         return { value: resolved };
     },
 
@@ -248,7 +244,7 @@ const Parser = {
         if (!rawToken) return { value: "&none" };
         let tok = rawToken.trim();
 
-        // 🟢 INTERCEPT AND EXPAND BARE MODIFIERS BEFORE THE REGEX
+        // 🟢 BARE MODIFIER AST EXPANSION
         if (tok === 'MOD_HYPR' || tok === 'KC_HYPR' || tok === 'HYPR') tok = 'LS(LC(LA(LGUI)))';
         if (tok === 'MOD_MEH' || tok === 'KC_MEH' || tok === 'MEH') tok = 'LS(LC(LALT))';
 
@@ -348,11 +344,21 @@ const Parser = {
             return { value: "&none" };
         }
         
-        if (bareResolved.startsWith('MOVE_')) { Utils.logConversion(state, rawToken, "&mmv", "layer_binding"); return { value: "&mmv", params: [{ value: bareResolved }] }; }
-        if (bareResolved.startsWith('SCRL_')) { Utils.logConversion(state, rawToken, "&msc", "layer_binding"); return { value: "&msc", params: [{ value: bareResolved }] }; }
-        if (['MB1', 'MB2', 'MB3', 'MB4', 'MB5'].includes(bareResolved)) { Utils.logConversion(state, rawToken, "&mkp", "layer_binding"); return { value: "&mkp", params: [{ value: bareResolved }] }; }
+        // 🟢 BEAUTIFUL NATIVE MOUSE LOGGING
+        if (bareResolved.startsWith('MOVE_')) { 
+            Utils.logConversion(state, rawToken, `&mmv ${bareResolved}`, "layer_binding", "", context); 
+            return { value: "&mmv", params: [{ value: bareResolved }] }; 
+        }
+        if (bareResolved.startsWith('SCRL_')) { 
+            Utils.logConversion(state, rawToken, `&msc ${bareResolved}`, "layer_binding", "", context); 
+            return { value: "&msc", params: [{ value: bareResolved }] }; 
+        }
+        if (['MB1', 'MB2', 'MB3', 'MB4', 'MB5'].includes(bareResolved)) { 
+            Utils.logConversion(state, rawToken, `&mkp ${bareResolved}`, "layer_binding", "", context); 
+            return { value: "&mkp", params: [{ value: bareResolved }] }; 
+        }
 
-        Utils.logConversion(state, rawToken, bareResolved, "layer_binding");
+        Utils.logConversion(state, rawToken, bareResolved, "layer_binding", "", context);
         return { value: "&kp", params: [{ value: bareResolved }] };
     }
 };
