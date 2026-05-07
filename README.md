@@ -1,3 +1,6 @@
+<sup> AI generated</sup>
+<div align="center">
+  
 # 🚀 VoyaGo
 
 **The ultimate layout migration tool: from ZSA Voyager to MoErgo Go60.**
