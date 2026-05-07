@@ -199,7 +199,20 @@ const Parser = {
         if (!str) return "none";
         let clean = str.replace(/^KC_/, '').replace(/^X_/, '').trim();
         if (/^[0-9]$/.test(clean)) return `N${clean}`;
-        if (Constants.QMK_TO_ZMK_MAP[clean]) return Constants.QMK_TO_ZMK_MAP[clean];
+        
+        // 🟢 FORCED OVERRIDES: Hard-map MoErgo Mouse Clicks directly in the parser to bypass bad cache
+        if (clean === "MS_BTN1" || clean === "LCLK") return "LCLK";
+        if (clean === "MS_BTN2" || clean === "RCLK") return "RCLK";
+        if (clean === "MS_BTN3" || clean === "MCLK") return "MCLK";
+
+        let mapped = Constants.QMK_TO_ZMK_MAP[clean];
+        
+        // Catch cached MB1s and force them to LCLK
+        if (mapped === "MB1") return "LCLK";
+        if (mapped === "MB2") return "RCLK";
+        if (mapped === "MB3") return "MCLK";
+        
+        if (mapped) return mapped;
         if (/^F[1-9][0-9]?$/.test(clean) || /^[A-Z]$/.test(clean)) return clean;
         if (clean === "none" || clean === "trans" || clean === 'QK_BOOT' || clean === 'CW_TOGG') return clean;
         if (clean.startsWith('RGB_')) return clean;
@@ -234,7 +247,8 @@ const Parser = {
         }
         
         let resolved = Parser.resolveZmkKeycode(str, str, state, context);
-        // 🟢 Using LCLK instead of MB1 here
+        
+        // 🟢 BLOCK INVALID ZMK MODIFIER MIXING: You cannot mix modifiers and mouse keys in ZMK. 
         if (['LCLK', 'RCLK', 'MCLK', 'MB4', 'MB5', 'MOVE_UP', 'MOVE_DOWN', 'MOVE_LEFT', 'MOVE_RIGHT', 'SCRL_UP', 'SCRL_DOWN', 'SCRL_LEFT', 'SCRL_RIGHT'].includes(resolved)) {
             Utils.logConversion(state, str, "&none", "warning", Utils.getZmkSuggestion(str), context);
             return { value: "none" };
@@ -354,7 +368,7 @@ const Parser = {
             return { value: "&msc", params: [{ value: bareResolved }] }; 
         }
         
-        // 🟢 Using LCLK instead of MB1 here
+        // 🟢 CORRECTLY LOGGING AND GENERATING LCLK / RCLK / MCLK
         if (['LCLK', 'RCLK', 'MCLK', 'MB4', 'MB5'].includes(bareResolved)) { 
             Utils.logConversion(state, rawToken, `&mkp ${bareResolved}`, "layer_binding", "", context); 
             return { value: "&mkp", params: [{ value: bareResolved }] }; 
