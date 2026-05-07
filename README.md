@@ -40,18 +40,27 @@ VoyaGo does everything locally in your browser for maximum privacy and lightning
 
 Here is exactly what VoyaGo handles automatically, and what requires a quick manual touch-up in the MoErgo editor.
 
+## 🔍 Under the Hood: Conversion Matrix
+
+Moving layouts across firmware ecosystems is notoriously difficult. Here is exactly what VoyaGo handles automatically, and what requires a quick manual touch-up in the MoErgo Layout Editor.
+
 | Feature | Translation Status | Notes |
 | :--- | :--- | :--- |
-| **Alphas, Numbers, & Symbols** | ✅ 100% Automated | 1:1 mapping to ZMK standard. |
-| **F-Keys & Numpad Keys** | ✅ 100% Automated | 1:1 mapping to ZMK standard. |
-| **Hold-Taps (`LT`, `MT`)** | ✅ 100% Automated | Deeply nested modifiers safely parsed. |
-| **Sticky Keys / One-Shot** | ✅ 100% Automated | Converted to ZMK `&sk`. |
-| **Layer Toggles (`TG`, `TO`)** | ✅ 100% Automated | Layer math is automatically shifted to preserve Go60 base layers. |
-| **Native Mouse Keys** | ✅ 100% Automated | Safely mapped to MoErgo `LCLK`, `RCLK`, and `&mmv`. |
-| **Custom Layer Colors** | ✅ 100% Automated | HSV extracted and bound to the ZMK JSON schema. |
-| **Tap Dances (`TD`)** | ⚠️ Manual Action | Must be rebuilt using ZMK's native *Mod-Morph* or *Tap-Dance* tools. |
-| **Custom Macros (`ST_MACRO`)** | ⚠️ Manual Action | Text-typing macros must be rebuilt in the ZMK Macro editor. |
-| **Oryx "Magic" Keys** | ⚠️ Manual Action | "Mouse Jiggler", "Drag Scroll", etc., are proprietary to ZSA and must be replaced with native MoErgo equivalents. |
+| **Alphas, Numbers, & Symbols** | ✅ 100% Automated | 1:1 mapping to ZMK standard keycodes. |
+| **F-Keys, Numpad, & Nav** | ✅ 100% Automated | 1:1 mapping to ZMK standard keycodes. |
+| **Combos (Chords)** | ✅ 100% Automated | Extracts key combinations, recalculates the geometry for the Go60 matrix, and assigns the correct layer math. |
+| **Hold-Taps (`LT`, `MT`)** | ✅ 100% Automated | Deeply nested modifiers safely parsed and translated to ZMK format. |
+| **Layer Toggles (`MO`, `TG`, `TO`)** | ✅ 100% Automated | Layer integers are dynamically shifted to append safely below the Go60 base layers. |
+| **Sticky Keys / One-Shot (`OSM`)** | ✅ 100% Automated | Unwrapped and natively converted to ZMK `&sk`. |
+| **Native Mouse Keys** | ✅ 100% Automated | Safely mapped to MoErgo `LCLK`, `RCLK`, `MCLK`, and scroll/move keys (`&mmv` / `&msc`). |
+| **Media & System Controls** | ✅ 100% Automated | Volume, display brightness, and playback keys flawlessly mapped. |
+| **Hardware Controls (BT, Reset)** | ✅ 100% Automated | Maps Bluetooth clearing, Bootloader, and Sys Reset commands safely. |
+| **Caps Word (`CW_TOGG`)** | ✅ 100% Automated | Cleanly converted to ZMK `&caps_word`. |
+| **RGB Lighting Controls** | ✅ 100% Automated | Standard toggles and hue/saturation/brightness mapped to `&rgb_ug`. |
+| **Custom Layer Colors** | ✅ 100% Automated | ZSA's hidden HSV matrix is extracted, mathematically converted to HEX, and bound as JSON decorations. |
+| **Tap Dances (`TD`)** | ⚠️ Manual Action | Must be rebuilt in the Layout Editor using ZMK's native *Mod-Morph* or *Tap-Dance* behaviors. |
+| **Custom Macros (`ST_MACRO`)** | ⚠️ Manual Action | Multi-keystroke text macros must be rebuilt in the ZMK Macro editor. |
+| **Oryx "Magic" Keys** | ⚠️ Manual Action | "Mouse Jiggler", "Drag Scroll", and "Dynamic CPI" are proprietary ZSA C-code and must be replaced with native MoErgo features. |
 
 ---
 
