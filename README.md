@@ -4,7 +4,8 @@
   <img src="logo_small.png" alt="VoyaGo Logo" width="120">
 
 # VoyaGo
-### **Migration your ZSA Voyager Layout to MoErgo Go60.**
+**Migration your ZSA Voyager Layout to MoErgo Go60.**
+ ###
 </div>
 
 **Endgame Migration from ZSA Voyager to MoErgo Go60.**
