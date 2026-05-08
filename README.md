@@ -4,11 +4,11 @@
   <img src="logo_small.png" alt="VoyaGo Logo" width="120">
 
 # VoyaGo
-**Migration your ZSA Voyager Layout to MoErgo Go60.**
+
  ###
 </div>
 
-**Endgame Migration from ZSA Voyager to MoErgo Go60.**
+**Migrate your ZSA Voyager Layout to MoErgo Go60**
 
 You’ve finally made the leap. You are upgrading from the 52-key ZSA Voyager to the next generation of ergonomic typing: the **MoErgo Go60**. 
 
