@@ -38,6 +38,7 @@ const Utils = {
         if (tok.includes('NAVIGATOR') || tok.includes('MS_JIGGLER') || tok.includes('SCROLL') || tok.includes('MS_DBL_CLICK')) return "Mouse feature. Requires native ZMK Mouse Keys bindings in the Layout Editor.";
         if (tok.includes('LAYER_COLOR') || tok.includes('RGB') || tok.includes('HSV_')) return "Rebuild using ZMK RGB Underglow behaviors (&rgb_ug).";
         if (tok.includes('LCTL(KC_MS') || tok.includes('LSFT(KC_MS')) return "ZMK cannot mix mouse clicks and keyboard modifiers on a single key. Rebuild as a ZMK Macro.";
+        if (tok.startsWith('LM(')) return "ZMK does not natively support holding a Layer + Modifier simultaneously. Rebuild using a custom ZMK behavior.";
         return "Requires a custom ZMK Behavior or Macro setup in the Layout Editor.";
     },
     getVoyagerPosition: (idx) => {
@@ -307,6 +308,10 @@ const Parser = {
                 if (!p0 || p0.value === "none") return { value: "&none" };
                 Utils.logConversion(state, rawToken, `&mt HYPR/MEH`, "hold_tap");
                 return { value: "&mt", params: [modAST, p0] };
+            }
+            if (func === 'LM') {
+                Utils.logConversion(state, rawToken, "&none", "warning", "ZMK does not natively support holding a Layer + Modifier simultaneously. You will need to build a custom ZMK behavior.", context);
+                return { value: "&none" };
             }
             if (['MT', 'LT', 'OSL', 'TT', 'TG', 'TO', 'MO'].includes(func)) {
                 let params = [];
