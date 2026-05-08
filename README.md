@@ -18,7 +18,7 @@ You’ve finally made the leap. You are upgrading from the 52-key ZSA Voyager to
 
 Leaving behind the hardware is the easy part—leaving behind your layout is where it gets tough. You’ve spent time in ZSA Oryx meticulously crafting your perfect layers, combos, and hold-taps. Rebuilding all of that from scratch in a completely different firmware ecosystem (ZMK) is a tedious, error-prone headache.
 
-> **VoyaGo makes it a one-click process.** > VoyaGo is a powerful, client-side web tool that instantly translates ZSA’s proprietary QMK C-code into a deeply structured, fully validated ZMK JSON file. It doesn’t just map keys; it safely splices your Voyager layout directly into the Go60's default trackball and encoder ecosystem, ready to be imported.
+**VoyaGo makes it a one-click process.**  VoyaGo is a powerful, client-side web tool that instantly translates ZSA’s proprietary QMK C-code into a deeply structured, fully validated ZMK JSON file. It doesn’t just map keys; it safely splices your Voyager layout directly into the Go60's default trackball and encoder ecosystem, ready to be imported.
 
 ---
 
