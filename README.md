@@ -10,8 +10,7 @@
 [![Launch VoyaGo](https://img.shields.io/badge/Launch_VoyaGo_App-2563EB?style=for-the-badge&logo=rocket&logoColor=white)](https://moosylog.github.io/voyago/)
   <br>
 </div>
-You’ve made the exciting choice to upgrade from the 52-key ZSA Voyager to the next generation of ergonomic typing: the **MoErgo Go60**. 
-
+You’ve made the exciting choice to upgrade from the 52-key ZSA Voyager to the next generation of ergonomic typing: the MoErgo Go60. 
 Getting a new keyboard is a thrill, but we know how much time you’ve spent in ZSA Oryx meticulously crafting your perfect layers, combos, and hold-taps. Instead of starting over in a completely new firmware ecosystem (ZMK), VoyaGo is here to provide a smooth, effortless migration. We’ll help you carry over the familiar layout you’re already used to, so you can feel right at home on your new board from day one.
 ---
 
