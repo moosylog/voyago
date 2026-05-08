@@ -3,7 +3,7 @@
 <div align="center">
   <img src="logo_small.png" alt="VoyaGo Logo" width="120" style="margin-bottom: 20px;">
 
-  # 🚀 VoyaGo
+  # VoyaGo
 
   **The One-Click Layout Migration Tool: ZSA Voyager ➔ MoErgo Go60**
 
