@@ -15,6 +15,7 @@ Getting a new keyboard is a thrill, but we know how much time you’ve spent in 
 ---
 <br>
 
+
 ## ✨ The Advantage
 
 Moving from QMK (Oryx) to ZMK (MoErgo) involves navigating two completely different architectures. VoyaGo bridges that gap instantly:
