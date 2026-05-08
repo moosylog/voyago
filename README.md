@@ -7,11 +7,9 @@
 
   **The One-Click Layout Migration Tool: ZSA Voyager ➔ MoErgo Go60**
 
-[![Launch VoyaGo App](https://img.shields.io/badge/Launch_VoyaGo_App-2563EB?style=for-the-badge&logo=rocket&logoColor=white)](https://moosylog.github.io/voyago/)
-
+[![Launch VoyaGo](https://img.shields.io/badge/Launch_VoyaGo_App-2563EB?style=for-the-badge&logo=rocket&logoColor=white)](https://moosylog.github.io/voyago/)
   <br>
 </div>
-
 You’ve finally made the leap. You are upgrading from the 52-key ZSA Voyager to the next generation of ergonomic typing: the **MoErgo Go60**. 
 
 Leaving behind the hardware is the easy part—leaving behind your layout is where it gets tough. You’ve spent time in ZSA Oryx meticulously crafting your perfect layers, combos, and hold-taps. Rebuilding all of that from scratch in a completely different firmware ecosystem (ZMK) is a tedious, error-prone headache.
