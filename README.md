@@ -7,9 +7,7 @@
 
   **The One-Click Layout Migration Tool: ZSA Voyager ➔ MoErgo Go60**
 
-  [![Privacy First](https://img.shields.io/badge/Privacy-100%25%20Client--Side-success?style=flat-square)](#)
-  [![ZMK Compatible](https://img.shields.io/badge/Firmware-ZMK_JSON-blue?style=flat-square)](#)
-  [![MoErgo](https://img.shields.io/badge/Target-Go60-purple?style=flat-square)](#)
+[![Launch VoyaGo App](https://img.shields.io/badge/Launch_VoyaGo_App-2563EB?style=for-the-badge&logo=rocket&logoColor=white)](https://moosylog.github.io/voyago/)
 
   <br>
 </div>
