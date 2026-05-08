@@ -20,11 +20,11 @@ Getting a new keyboard is a thrill, but we know how much time you’ve spent in 
 
 Moving from QMK (Oryx) to ZMK (MoErgo) involves navigating two completely different architectures. VoyaGo bridges that gap instantly:
 
-* **🧠 Intelligent Layer Splicing:** The Voyager has 52 keys; the Go60 has 66 (including trackballs and encoders). VoyaGo precisely overlays your 52 keys onto the Go60 template, padding the empty spaces with transparent (`&trans`) keys so MoErgo's default trackball and display settings shine through untouched.
-* **🌳 Deep AST Modifier Translation:** ZMK strictly enforces Abstract Syntax Trees for nested keys. VoyaGo mathematically unwraps your QMK macros (like `MOD_HYPR` or `LGUI(LSFT(KC_A))`) and compiles them into valid, deeply nested ZMK JSON arrays.
-* **🎨 Per-Key RGB Preservation:** Don't lose your lighting! VoyaGo rips the hidden `HSV` color matrix out of the ZSA source code, calculates the math, and injects exact HEX codes into your Go60 layout.
-* **⚙️ Auto-Generated Combos:** Migrates your complex multi-key combos perfectly, calculating the exact ZMK matrix positions required for the Go60's physical layout.
-* **🛠️ The "Action Required" Report:** ZSA uses proprietary, closed-source C code for things like Tap-Dances, Auto-Mouse, and Siri macros that don't translate 1:1 into standard ZMK. VoyaGo catches these dealbreakers, safely leaves the key blank, and generates a printable UI report detailing exactly *what* the feature was, *where* it lived, and *how* to rebuild it.
+* ** Intelligent Layer Splicing:** The Voyager has 52 keys; the Go60 has 66 (including trackballs and encoders). VoyaGo precisely overlays your 52 keys onto the Go60 template, padding the empty spaces with transparent (`&trans`) keys so MoErgo's default trackball and display settings shine through untouched.
+* ** Deep AST Modifier Translation:** ZMK strictly enforces Abstract Syntax Trees for nested keys. VoyaGo mathematically unwraps your QMK macros (like `MOD_HYPR` or `LGUI(LSFT(KC_A))`) and compiles them into valid, deeply nested ZMK JSON arrays.
+* ** Per-Key RGB Preservation:** Don't lose your lighting! VoyaGo rips the hidden `HSV` color matrix out of the ZSA source code, calculates the math, and injects exact HEX codes into your Go60 layout.
+* ** Auto-Generated Combos:** Migrates your complex multi-key combos perfectly, calculating the exact ZMK matrix positions required for the Go60's physical layout.
+* ** The "Action Required" Report:** ZSA uses proprietary, closed-source C code for things like Tap-Dances, Auto-Mouse, and Siri macros that don't translate 1:1 into standard ZMK. VoyaGo catches these dealbreakers, safely leaves the key blank, and generates a printable UI report detailing exactly *what* the feature was, *where* it lived, and *how* to rebuild it.
 
 ---
 
