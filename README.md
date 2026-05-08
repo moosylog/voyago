@@ -1,20 +1,24 @@
 <sup> AI generated</sup>
 
 <div align="center">
-  <img src="logo_small.png" alt="VoyaGo Logo" width="120">
+  <img src="logo_small.png" alt="VoyaGo Logo" width="120" style="margin-bottom: 20px;">
 
-# VoyaGo
+  # 🚀 VoyaGo
 
- ###
+  **The One-Click Layout Migration Tool: ZSA Voyager ➔ MoErgo Go60**
+
+  [![Privacy First](https://img.shields.io/badge/Privacy-100%25%20Client--Side-success?style=flat-square)](#)
+  [![ZMK Compatible](https://img.shields.io/badge/Firmware-ZMK_JSON-blue?style=flat-square)](#)
+  [![MoErgo](https://img.shields.io/badge/Target-Go60-purple?style=flat-square)](#)
+
+  <br>
 </div>
-
-**Migrate your ZSA Voyager Layout to MoErgo Go60**
 
 You’ve finally made the leap. You are upgrading from the 52-key ZSA Voyager to the next generation of ergonomic typing: the **MoErgo Go60**. 
 
-Leaving behind the hardware is the easy part—leaving behind your layout is where it gets tough. You’ve spent a lot of time in ZSA Oryx meticulously crafting your perfect layers, combos, and hold-taps. Rebuilding all of that from scratch in a completely different firmware ecosystem (ZMK) is a tedious, error-prone headache.
+Leaving behind the hardware is the easy part—leaving behind your layout is where it gets tough. You’ve spent time in ZSA Oryx meticulously crafting your perfect layers, combos, and hold-taps. Rebuilding all of that from scratch in a completely different firmware ecosystem (ZMK) is a tedious, error-prone headache.
 
-**VoyaGo makes it a one-click process.** VoyaGo is a powerful, client-side web tool that instantly translates ZSA’s proprietary QMK C-code into a deeply structured, fully validated ZMK JSON file. It doesn’t just map keys; it safely splices your Voyager layout directly into the Go60's default trackball and encoder ecosystem, ready to be imported into the MoErgo Layout Editor.
+> **VoyaGo makes it a one-click process.** > VoyaGo is a powerful, client-side web tool that instantly translates ZSA’s proprietary QMK C-code into a deeply structured, fully validated ZMK JSON file. It doesn’t just map keys; it safely splices your Voyager layout directly into the Go60's default trackball and encoder ecosystem, ready to be imported.
 
 ---
 
@@ -32,15 +36,14 @@ Moving from QMK (Oryx) to ZMK (MoErgo) involves navigating two completely differ
 
 ## 📖 How to Use VoyaGo
 
-VoyaGo does everything locally in your browser for maximum privacy and lightning-fast speed. No server uploads required.
+VoyaGo does everything locally in your browser for maximum privacy and lightning-fast speed. No server uploads are required.
 
-1. **Get Your Source:** Open your layout in ZSA Oryx, click the `< >` icon, and select **Download Source** (Do *not* click the main Download Firmware button).
+1. **Get Your Source:** Open your layout in ZSA Oryx, click the `< >` icon, and select **Download Source** *(Do not click the main Download Firmware button)*.
 2. **Drop it in VoyaGo:** Drag and drop the downloaded `.zip` (or the `keymap.c` file) into the VoyaGo drop zone.
 3. **Review the Report:** VoyaGo processes the C-code in milliseconds. Review the UI to see how many standard keys, modifiers, and combos were successfully ported.
 4. **Download & Import:** Click **Download Layout** to get your newly minted `_Appended.json` file, and drag it directly into the [MoErgo Layout Editor](https://layout.moergo.com).
 
 ---
-
 
 ## 🔍 Under the Hood: Conversion Matrix
 
@@ -63,6 +66,13 @@ Moving layouts across firmware ecosystems is notoriously difficult. Here is exac
 | **Tap Dances (`TD`)** | ⚠️ Manual Action | Must be rebuilt in the Layout Editor using ZMK's native *Mod-Morph* or *Tap-Dance* behaviors. |
 | **Custom Macros (`ST_MACRO`)** | ⚠️ Manual Action | Multi-keystroke text macros must be rebuilt in the ZMK Macro editor. |
 | **Oryx "Magic" Keys** | ⚠️ Manual Action | "Mouse Jiggler", "Drag Scroll", and "Dynamic CPI" are proprietary ZSA C-code and must be replaced with native MoErgo features. |
+
+---
+
+<div align="center">
+  <b>Stop re-typing layouts. Start typing.</b><br>
+  Built with ⌨️ for the ergonomic community.
+</div>
 
 ---
 
